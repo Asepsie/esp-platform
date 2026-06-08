@@ -1,0 +1,7 @@
+# Default sdkconfig for firmware-c6 (ESP32-C6 primary MCU).
+# Generated values land in sdkconfig; keep persistent overrides here.
+
+CONFIG_IDF_TARGET="esp32c6"
+
+# Serial console over the built-in USB-Serial/JTAG controller.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
