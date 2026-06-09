@@ -122,3 +122,28 @@ target_include_directories(test_control_loop PRIVATE
     ../../components/bsp/include
     ../../components/bsp/mock
     ../../components/platform/include)
+
+# hal_nvs: file-backed mock (/tmp/nvs_sim). No ESP-IDF.
+add_host_test(test_hal_nvs
+    tests/test_hal_nvs.c
+    ../../components/bsp/mock/hal_nvs_mock.c)
+target_include_directories(test_hal_nvs PRIVATE
+    ../../components/bsp/include
+    ../../components/bsp/mock
+    ../../components/platform/include)
+
+# hal_timer: real CLOCK_MONOTONIC + usleep mock (no extra mock header).
+add_host_test(test_hal_timer
+    tests/test_hal_timer.c
+    ../../components/bsp/mock/hal_timer_mock.c)
+target_include_directories(test_hal_timer PRIVATE
+    ../../components/bsp/include)
+
+# hal_wdt: no-op call-tracking mock.
+add_host_test(test_hal_wdt
+    tests/test_hal_wdt.c
+    ../../components/bsp/mock/hal_wdt_mock.c)
+target_include_directories(test_hal_wdt PRIVATE
+    ../../components/bsp/include
+    ../../components/bsp/mock
+    ../../components/platform/include)

@@ -298,7 +298,7 @@ thermostat/
 - [ ] `zigbee_coordinator` (coordinator role, network formation)
 - [ ] `zigbee_cluster_handler` (attribute → bridge message)
 - [x] `uart_bridge` (H2 server side — transport/RX/heartbeat done; command dispatch stubbed)
-- [ ] H2 `bsp` HAL (UART/GPIO/NVS) — **known gap:** `uart_bridge.c` includes `driver/uart.h` directly, bypassing the HAL boundary (hal-design.md applies to both firmwares). Route UART through a `hal_uart` when the H2 `bsp` lands.
+- [x] H2 `bsp` HAL — `hal_uart` + `hal_gpio` (status LED) + host mocks/tests; `uart_bridge.c` now goes through `hal_uart` (the `driver/uart.h` boundary violation is fixed). NVS TBD.
 - [ ] `test_cluster_handler.c` green
 - [x] `test_uart_bridge_framing.c` green
 - [ ] Zigbee pairing: Sonoff SNZB-02P on real hardware
@@ -306,7 +306,7 @@ thermostat/
 
 ### firmware-c6 (build on validated H2)
 - [x] C6 project scaffold + sdkconfig (no Zigbee in REQUIRES)
-- [~] `platform/` (partial: host/target compat shim `platform_compat.h`; qemu + full timing abstraction TBD)
+- [~] `platform/` (host/target compat shim `platform_compat.h` done; `hal_timer` provides the RT-08 timing abstraction; QEMU variant TBD)
 - [ ] `config/thermostat_config.h`
 - [x] `sensor_state` + `data_model.h` + `cluster_map`
 - [ ] `zigbee_bridge` (C6 client — receive H2 UART messages → state store)
@@ -314,7 +314,7 @@ thermostat/
 - [ ] `hal_spi` + `hal_i2c` + `hal_ledc` (DISPLAY_LCD)
 - [ ] `hal_segment` (DISPLAY_SEGMENT)
 - [ ] `hal_ble` (commissioning)
-- [ ] `hal_nvs` | `hal_ota` | `hal_wifi` | `hal_timer` | `hal_wdt`
+- [~] `hal_nvs` ✓ · `hal_timer` ✓ · `hal_wdt` ✓ (target + mock + host tests green) · `hal_ota` · `hal_wifi` (remaining)
 - [x] `control_loop` + tests green (relay hysteresis, modes, dry-contact lockout) + 1 Hz RT-01 control task (`control_task.c`)
 - [ ] `ota_manager` + `ota_transport_menu` + H2 flashing via UART + tests green
 - [ ] `bacnet_server` + object model + tests green

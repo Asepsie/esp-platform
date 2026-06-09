@@ -81,5 +81,15 @@ add_host_test(test_uart_bridge_framing
 target_include_directories(test_uart_bridge_framing PRIVATE
     ../../components/uart_bridge/include)
 
+# H2 bsp HAL mocks: loopback UART + GPIO capture (no ESP-IDF, no hardware).
+add_host_test(test_h2_hal
+    tests/test_h2_hal.c
+    ../../components/bsp/mock/hal_uart_mock.c
+    ../../components/bsp/mock/hal_gpio_mock.c)
+target_include_directories(test_h2_hal PRIVATE
+    ../../components/bsp/include
+    ../../components/bsp/mock
+    ../../components/platform/include)
+
 # Planned next (see module checklist in CLAUDE.md):
 #   add_host_test(test_cluster_handler ...)

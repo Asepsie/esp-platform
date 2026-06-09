@@ -2,48 +2,28 @@
 // uart_bridge.c — H2 side UART driver + RX task for the C6 <-> H2 bridge.
 //
 // Responsibilities:
-//   * configure UART1 at 115200 8N1 (no flow control)
+//   * bring up the bridge UART via hal_uart (the H2 bsp owns port/pins/baud)
 //   * RX task: byte-sync to SOF, read the rest of each frame, decode it with the
 //     shared framing code, and dispatch valid command frames to the callback
 //   * TX helpers: encode + write reports / heartbeats (serialized by a mutex)
 //   * heartbeat task: emit MSG_HEARTBEAT every 5 s
 //
-// Framing/CRC and wire types come from uart_bridge_framing.c / _protocol.h.
+// This file deals only in bytes and frames — no driver/* (HAL boundary). UART
+// hardware lives in hal_uart.c. Framing/CRC + wire types come from
+// uart_bridge_framing.c / uart_bridge_protocol.h.
 // =============================================================================
 #include "uart_bridge.h"
+#include "hal_uart.h"
 
-#include "driver/uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "esp_check.h"
 #include "esp_log.h"
 
 #include <string.h>
 
-// ---------------------------------------------------------------------------
-// Hardware configuration (H2 side).
-//
-// We use UART1, NOT UART0: UART0 is the default log console (see
-// sdkconfig.defaults). The hardware spec (docs/hardware/hardware-spec-v2.md §6)
-// shows the bridge on "H2 GPIO UART0_TX/RX" but gives no concrete GPIO numbers
-// and assumes the console is elsewhere. Until the schematic pins are final,
-// these are placeholders — CONFIRM AGAINST THE BOARD before bring-up. They are
-// overridable from the build (e.g. -DUART_BRIDGE_TX_GPIO=...).
-// ---------------------------------------------------------------------------
-#ifndef UART_BRIDGE_PORT
-#define UART_BRIDGE_PORT          UART_NUM_1
-#endif
-#ifndef UART_BRIDGE_TX_GPIO
-#define UART_BRIDGE_TX_GPIO       5    // H2 TX -> C6 GPIO17 (RX)   [TODO confirm]
-#endif
-#ifndef UART_BRIDGE_RX_GPIO
-#define UART_BRIDGE_RX_GPIO       4    // H2 RX <- C6 GPIO16 (TX)   [TODO confirm]
-#endif
-
-#define UART_BRIDGE_BAUD          115200
-#define UART_BRIDGE_RX_BUF        (BRIDGE_MAX_FRAME * 4)  // driver ring buffer
-#define UART_BRIDGE_TX_BUF        0                       // 0 = blocking writes
+// UART hardware (port, pins, baud, ring buffers) is owned by hal_uart — see
+// firmware-h2/components/bsp/. This module is pure framing + tasks.
 
 #define UART_BRIDGE_RX_TASK_STACK 4096
 #define UART_BRIDGE_RX_TASK_PRIO  6
@@ -70,12 +50,11 @@ static uart_bridge_stats_t s_stats;
 // the frame timeout. Returns 0 on success, -1 on timeout/error.
 static int read_exact(uint8_t *buf, size_t n)
 {
-    const TickType_t timeout = pdMS_TO_TICKS(UART_BRIDGE_FRAME_TIMEOUT_MS);
     size_t got = 0;
     while (got < n) {
-        int r = uart_read_bytes(UART_BRIDGE_PORT, buf + got, n - got, timeout);
+        int r = hal_uart_read(buf + got, n - got, UART_BRIDGE_FRAME_TIMEOUT_MS);
         if (r <= 0) {
-            return -1; // timeout or driver error mid-frame
+            return -1; // timeout or error mid-frame
         }
         got += (size_t)r;
     }
@@ -95,7 +74,7 @@ static esp_err_t send_frame(bridge_msg_type_t type,
     }
 
     xSemaphoreTake(s_tx_mutex, portMAX_DELAY);
-    int written = uart_write_bytes(UART_BRIDGE_PORT, frame, (size_t)frame_len);
+    int written = hal_uart_write(frame, (size_t)frame_len);
     if (written == frame_len) {
         s_stats.tx_frames++;
     }
@@ -121,7 +100,7 @@ static void rx_task(void *arg)
     for (;;) {
         // 1. Sync: read one byte at a time until we see a start-of-frame marker.
         uint8_t sof;
-        if (uart_read_bytes(UART_BRIDGE_PORT, &sof, 1, portMAX_DELAY) != 1) {
+        if (hal_uart_read(&sof, 1, HAL_UART_WAIT_FOREVER) != 1) {
             continue;
         }
         if (sof != BRIDGE_SOF) {
@@ -194,24 +173,10 @@ esp_err_t uart_bridge_init(bridge_cmd_cb_t cmd_cb)
         return ESP_ERR_NO_MEM;
     }
 
-    const uart_config_t cfg = {
-        .baud_rate  = UART_BRIDGE_BAUD,
-        .data_bits  = UART_DATA_8_BITS,
-        .parity     = UART_PARITY_DISABLE,
-        .stop_bits  = UART_STOP_BITS_1,
-        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-    ESP_RETURN_ON_ERROR(
-        uart_driver_install(UART_BRIDGE_PORT, UART_BRIDGE_RX_BUF,
-                            UART_BRIDGE_TX_BUF, 0, NULL, 0),
-        TAG, "uart_driver_install failed");
-    ESP_RETURN_ON_ERROR(uart_param_config(UART_BRIDGE_PORT, &cfg),
-                        TAG, "uart_param_config failed");
-    ESP_RETURN_ON_ERROR(
-        uart_set_pin(UART_BRIDGE_PORT, UART_BRIDGE_TX_GPIO, UART_BRIDGE_RX_GPIO,
-                     UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE),
-        TAG, "uart_set_pin failed");
+    esp_err_t err = hal_uart_init();
+    if (err != ESP_OK) {
+        return err;
+    }
 
     if (xTaskCreate(rx_task, "ub_rx", UART_BRIDGE_RX_TASK_STACK, NULL,
                     UART_BRIDGE_RX_TASK_PRIO, NULL) != pdPASS) {
@@ -222,9 +187,7 @@ esp_err_t uart_bridge_init(bridge_cmd_cb_t cmd_cb)
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGI(TAG, "bridge up: UART%d TX=%d RX=%d @ %d 8N1",
-             UART_BRIDGE_PORT, UART_BRIDGE_TX_GPIO, UART_BRIDGE_RX_GPIO,
-             UART_BRIDGE_BAUD);
+    ESP_LOGI(TAG, "bridge up via hal_uart @ 115200 8N1");
     return ESP_OK;
 }
 
