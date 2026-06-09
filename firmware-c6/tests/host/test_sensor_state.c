@@ -241,6 +241,23 @@ static void test_bacnet_unknown_instance_rejected(void)
     TEST_ASSERT_EQUAL_INT(ESP_ERR_NOT_FOUND, sensor_state_get_bacnet_value(999, &v));
 }
 
+// NVS health (set at boot from hal_nvs): write count → AI 303, recovery flag.
+static void test_nvs_status_diagnostic(void)
+{
+    // Defaults after init: not recovered, zero writes.
+    TEST_ASSERT_FALSE(sensor_state_get_nvs_recovered());
+    float v = -1.0f;
+    TEST_ASSERT_EQUAL_INT(ESP_OK, sensor_state_get_bacnet_value(303, &v));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, v);
+
+    // Record a boot-time recovery + commit count.
+    sensor_state_set_nvs_status(true, 7);
+
+    TEST_ASSERT_TRUE(sensor_state_get_nvs_recovered());
+    TEST_ASSERT_EQUAL_INT(ESP_OK, sensor_state_get_bacnet_value(303, &v));
+    TEST_ASSERT_EQUAL_FLOAT(7.0f, v);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -257,5 +274,6 @@ int main(void)
     RUN_TEST(test_deadline_miss_counter);
     RUN_TEST(test_battery_min_diagnostic);
     RUN_TEST(test_bacnet_unknown_instance_rejected);
+    RUN_TEST(test_nvs_status_diagnostic);
     return UNITY_END();
 }

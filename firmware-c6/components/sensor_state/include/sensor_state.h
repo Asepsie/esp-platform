@@ -58,6 +58,15 @@ esp_err_t sensor_state_get_recipe(control_recipe_t *out);
 uint32_t sensor_state_get_deadline_misses(void);
 void     sensor_state_increment_deadline_miss(void);
 
+// Record NVS health, called once at boot after hal_nvs_init(). The commit
+// count is exposed northbound as BACnet Analog Input instance 303 (flash wear);
+// the recovery flag is readable via sensor_state_get_nvs_recovered() and is
+// intended to drive a BMS alarm on a factory-reset event.
+void     sensor_state_set_nvs_status(bool recovered, uint32_t write_count);
+
+// True if NVS corruption recovery ran at boot (else false).
+bool     sensor_state_get_nvs_recovered(void);
+
 #ifdef __cplusplus
 }
 #endif

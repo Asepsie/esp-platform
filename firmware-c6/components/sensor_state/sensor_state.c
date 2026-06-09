@@ -14,6 +14,7 @@
 #define BACNET_INST_DEADLINE_MISSES  300
 #define BACNET_INST_ZIGBEE_LQI       301
 #define BACNET_INST_BATTERY_MIN      302
+#define BACNET_INST_NVS_WRITES       303
 
 // RT-05: state.mutex max hold time is 1 ms. Acquire with a finite timeout
 // (budget + slack for scheduling jitter) so callers in high-priority tasks
@@ -47,6 +48,8 @@ typedef struct {
     uint32_t       rt_deadline_miss_count;
     uint8_t        zigbee_avg_lqi;
     uint8_t        battery_min_pct;
+    uint32_t       nvs_write_count;  // NVS commits — BACnet AI 303
+    bool           nvs_recovered;    // NVS corruption recovery ran at boot
 
     // Metadata
     uint32_t       last_update_ms;
@@ -396,6 +399,9 @@ esp_err_t sensor_state_get_bacnet_value(uint32_t instance, float *out)
     case BACNET_INST_BATTERY_MIN:
         *out = (float)s.battery_min_pct;
         break;
+    case BACNET_INST_NVS_WRITES:
+        *out = (float)s.nvs_write_count;
+        break;
     default:
         ret = ESP_ERR_NOT_FOUND; // space/equipment instances: bacnet component
         break;
@@ -451,4 +457,24 @@ void sensor_state_increment_deadline_miss(void)
     }
     s.rt_deadline_miss_count++;
     platform_mutex_unlock(s.mutex);
+}
+
+void sensor_state_set_nvs_status(bool recovered, uint32_t write_count)
+{
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return;
+    }
+    s.nvs_recovered   = recovered;
+    s.nvs_write_count = write_count;
+    platform_mutex_unlock(s.mutex);
+}
+
+bool sensor_state_get_nvs_recovered(void)
+{
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return s.nvs_recovered; // unlocked read fallback (rare)
+    }
+    bool v = s.nvs_recovered;
+    platform_mutex_unlock(s.mutex);
+    return v;
 }

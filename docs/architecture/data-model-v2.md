@@ -377,7 +377,7 @@ typedef struct {
 Instances   0–99:   Space-level aggregated values (per space)
 Instances 100–199:  Equipment-level raw values (per equipment)
 Instances 200–299:  Control — setpoints, modes, commands
-Instances 300–399:  Diagnostics — RT health, Zigbee LQI, battery
+Instances 300–399:  Diagnostics — RT health, Zigbee LQI, battery, NVS wear
 ```
 
 ### 6.2 Object map table
@@ -424,6 +424,7 @@ static const bacnet_object_map_entry_t BACNET_OBJECT_MAP[] = {
     {300, "Diag-DeadlineMisses",  "Control loop deadline misses", OBJ_ANALOG_INPUT,  -1, NULL,     false, 0.0f },
     {301, "Diag-ZigbeeLQI",       "Zigbee average LQI",           OBJ_ANALOG_INPUT,  -1, NULL,     false, 1.0f },
     {302, "Diag-BatteryMin",      "Lowest sensor battery %",      OBJ_ANALOG_INPUT,  -1, NULL,     false, 5.0f },
+    {303, "Diag-NVSWrites",       "NVS commit count (flash wear)", OBJ_ANALOG_INPUT, -1, NULL,     false, 1.0f },
 };
 #define BACNET_OBJECT_MAP_SIZE (sizeof(BACNET_OBJECT_MAP) / sizeof(BACNET_OBJECT_MAP[0]))
 ```
@@ -464,10 +465,12 @@ typedef struct {
     // Layer 5 — BACnet mirror state
     uint32_t         bacnet_cov_sequence; ///< Incremented on each COV notification
 
-    // Diagnostics (written by rt_monitor task)
+    // Diagnostics (written by rt_monitor task; NVS fields set once at boot)
     uint32_t         rt_deadline_miss_count;
     uint8_t          zigbee_avg_lqi;
     uint8_t          battery_min_pct;
+    uint32_t         nvs_write_count;   ///< NVS commits — BACnet AI 303 (flash wear)
+    bool             nvs_recovered;     ///< NVS corruption recovery ran at boot
 
     // Metadata
     uint32_t         last_update_ms;
