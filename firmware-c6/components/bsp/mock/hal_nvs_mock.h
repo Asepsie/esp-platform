@@ -15,6 +15,9 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+#include <stdbool.h>
+
 /**
  * @brief Wipe all simulated NVS state (deletes the backing directory contents).
  *
@@ -22,6 +25,25 @@ extern "C" {
  * clears the initialized flag, so @c hal_nvs_init() must be called afterwards.
  */
 void hal_nvs_mock_reset(void);
+
+/**
+ * @brief Advance the mock's simulated clock by @p ms milliseconds.
+ *
+ * Drives write coalescing in host tests: if there are pending writes and the
+ * elapsed time since the last write reaches the 2 s window, a commit occurs.
+ */
+void hal_nvs_mock_advance_ms(uint32_t ms);
+
+/**
+ * @brief Arm a simulated corruption so the next @c hal_nvs_init() recovers.
+ *
+ * Makes the next init behave as if the partition had no free pages: it wipes
+ * the store (factory defaults), resets the write counter, and reports
+ * @c recovered == true.
+ *
+ * @param corrupt @c true to arm recovery on the next init.
+ */
+void hal_nvs_mock_set_corrupt(bool corrupt);
 
 #ifdef __cplusplus
 }

@@ -13,6 +13,8 @@
 #define HAL_NVS_H
 
 #include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include "platform_compat.h"   /* esp_err_t (target: esp_err.h; host: shim) */
 
 #ifdef __cplusplus
@@ -20,14 +22,41 @@ extern "C" {
 #endif
 
 /**
- * @brief Initialize the NVS backing store.
+ * @brief Initialize the NVS backing store, with corruption recovery.
  *
- * On target, initializes the NVS flash partition (erasing/re-initializing on a
- * version/page mismatch) and opens the HAL namespace read-write.
+ * Opens the HAL namespace read-write. If the NVS partition has no free pages or
+ * a version mismatch (@c ESP_ERR_NVS_NO_FREE_PAGES / @c NEW_VERSION_FOUND), it
+ * is erased and re-initialized to factory defaults (an empty store, write
+ * counter reset to 0).
  *
+ * @param[out] recovered Set to @c true if corruption recovery ran, @c false
+ *                       otherwise. May be NULL. The caller can log/alarm on it
+ *                       (the recovery event also surfaces as a BACnet alarm).
  * @return @c ESP_OK on success, or an @c esp_err_t from the backend.
  */
-esp_err_t hal_nvs_init(void);
+esp_err_t hal_nvs_init(bool *recovered);
+
+/**
+ * @brief Force any pending (coalesced) writes to be committed now.
+ *
+ * Writes are normally coalesced — committed ~2 s after the last write — to
+ * absorb bursts (e.g. dragging a UI slider). Call this to commit immediately,
+ * e.g. before reboot or on a deliberate save.
+ *
+ * @return @c ESP_OK on success, or @c ESP_ERR_INVALID_STATE if not initialized.
+ */
+esp_err_t hal_nvs_flush(void);
+
+/**
+ * @brief Total number of NVS commits since the counter was created.
+ *
+ * Persisted across reboots under the reserved key "__hal_nvs_writes"; reset to 0
+ * by corruption recovery. Intended to map to BACnet Analog Input instance 303
+ * for flash-wear observability.
+ *
+ * @return The commit count (0 if not initialized).
+ */
+uint32_t hal_nvs_get_write_count(void);
 
 /**
  * @brief Store a NUL-terminated string under @p key.

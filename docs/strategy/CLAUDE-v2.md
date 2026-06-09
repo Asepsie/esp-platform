@@ -314,7 +314,7 @@ thermostat/
 - [ ] `hal_spi` + `hal_i2c` + `hal_ledc` (DISPLAY_LCD)
 - [ ] `hal_segment` (DISPLAY_SEGMENT)
 - [ ] `hal_ble` (commissioning)
-- [~] `hal_nvs` ✓ · `hal_timer` ✓ · `hal_wdt` ✓ (target + mock + host tests green) · `hal_ota` · `hal_wifi` (remaining)
+- [~] `hal_nvs` ✓ (write-coalescing, commit counter → BACnet AI 303, corruption recovery) · `hal_timer` ✓ · `hal_wdt` ✓ — target + mock + host tests green · `hal_ota` · `hal_wifi` (remaining)
 - [x] `control_loop` + tests green (relay hysteresis, modes, dry-contact lockout) + 1 Hz RT-01 control task (`control_task.c`)
 - [ ] `ota_manager` + `ota_transport_menu` + H2 flashing via UART + tests green
 - [ ] `bacnet_server` + object model + tests green
