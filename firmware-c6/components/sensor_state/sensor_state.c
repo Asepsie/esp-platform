@@ -15,6 +15,12 @@
 #define BACNET_INST_ZIGBEE_LQI       301
 #define BACNET_INST_BATTERY_MIN      302
 
+// RT-05: state.mutex max hold time is 1 ms. Acquire with a finite timeout
+// (budget + slack for scheduling jitter) so callers in high-priority tasks
+// (e.g. the prio-5 control loop) never block indefinitely — RT-02.
+#define STATE_MUTEX_BUDGET_MS   1
+#define STATE_MUTEX_TIMEOUT_MS  (STATE_MUTEX_BUDGET_MS + 9)  // 10 ms bound
+
 // Central runtime state — private to this translation unit. Access is API-only
 // (RT-04), so the struct never needs to appear in a public header.
 typedef struct {
@@ -201,7 +207,9 @@ esp_err_t sensor_state_add_space(const space_t *space)
     if (space == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     // Replace if an entry with the same id exists.
     for (uint8_t i = 0; i < s.space_count; i++) {
         if (strncmp(s.spaces[i].id, space->id, ID_LEN) == 0) {
@@ -227,7 +235,9 @@ esp_err_t sensor_state_add_equipment(const equipment_t *equipment)
     if (equipment == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     for (uint8_t i = 0; i < s.equipment_count; i++) {
         if (strncmp(s.equipment[i].id, equipment->id, ID_LEN) == 0) {
             s.equipment[i] = *equipment;
@@ -254,7 +264,9 @@ esp_err_t sensor_state_register_device(const zb_device_t *device)
     if (device == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     int di = find_device_index(device->ieee_addr);
     if (di >= 0) {
         s.devices[di] = *device;
@@ -276,7 +288,9 @@ esp_err_t sensor_state_set_device_online(const char *ieee, bool online)
     if (ieee == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     int di = find_device_index(ieee);
     if (di < 0) {
         platform_mutex_unlock(s.mutex);
@@ -295,7 +309,9 @@ esp_err_t sensor_state_update_attribute(const char *ieee, uint16_t cluster,
     if (ieee == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
 
     int di = find_device_index(ieee);
     if (di < 0) {
@@ -347,7 +363,9 @@ esp_err_t sensor_state_get_space(const char *space_id, space_t *out)
     if (space_id == NULL || out == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     for (uint8_t i = 0; i < s.space_count; i++) {
         if (strncmp(s.spaces[i].id, space_id, ID_LEN) == 0) {
             *out = s.spaces[i];
@@ -364,7 +382,9 @@ esp_err_t sensor_state_get_bacnet_value(uint32_t instance, float *out)
     if (out == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     esp_err_t ret = ESP_OK;
     switch (instance) {
     case BACNET_INST_DEADLINE_MISSES:
@@ -391,7 +411,9 @@ esp_err_t sensor_state_set_recipe(const control_recipe_t *recipe)
     if (recipe == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     s.active_recipe = *recipe;
     platform_mutex_unlock(s.mutex);
     return ESP_OK;
@@ -402,7 +424,9 @@ esp_err_t sensor_state_get_recipe(control_recipe_t *out)
     if (out == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
     *out = s.active_recipe;
     platform_mutex_unlock(s.mutex);
     return ESP_OK;
@@ -412,7 +436,9 @@ esp_err_t sensor_state_get_recipe(control_recipe_t *out)
 
 uint32_t sensor_state_get_deadline_misses(void)
 {
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return s.rt_deadline_miss_count; // unlocked aligned-word read fallback (rare)
+    }
     uint32_t v = s.rt_deadline_miss_count;
     platform_mutex_unlock(s.mutex);
     return v;
@@ -420,7 +446,9 @@ uint32_t sensor_state_get_deadline_misses(void)
 
 void sensor_state_increment_deadline_miss(void)
 {
-    platform_mutex_lock(s.mutex);
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return;
+    }
     s.rt_deadline_miss_count++;
     platform_mutex_unlock(s.mutex);
 }

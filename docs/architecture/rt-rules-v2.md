@@ -187,6 +187,20 @@ platform_delay_ms(1);    // → vTaskDelay on target, usleep on host
 platform_get_ms();       // → esp_timer_get_time()/1000 on target, clock() on host
 ```
 
+**Clarification — periodic task scheduling is exempt.** RT-08 governs *logic*
+that must run on host/QEMU. A target-only **task wrapper** whose sole job is to
+schedule a tick (e.g. `control_task.c`) may use FreeRTOS scheduling primitives
+directly — `xTaskGetTickCount()` and `vTaskDelayUntil()` — as the RT-02 and RT-09
+examples in this document do. Two conditions keep this compliant:
+
+1. The testable work stays in a separate, timing-free unit (e.g.
+   `control_loop_tick()` / `control_loop_decide()`), so host tests never touch
+   the scheduler.
+2. Tick conversions use `pdMS_TO_TICKS(...)`, never raw tick counts — this is
+   what the “1 tick ≠ 1 ms” prohibition on bare `vTaskDelay(1)` is about.
+
+The task wrapper is not unit-tested on host; it is validated on target / QEMU.
+
 ---
 
 ## RT-09 — Deadline miss monitoring

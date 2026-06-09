@@ -210,7 +210,7 @@ thermostat/
 │   ├── config/thermostat_config.h
 │   ├── main/main.c
 │   ├── components/
-│   │   ├── hal/                         ← C6 HAL (SPI, I2C, GPIO, WiFi, OTA...)
+│   │   ├── bsp/                         ← C6 HAL (named "bsp"; IDF reserves "hal"). hal_* API.
 │   │   ├── platform/                    ← timing abstraction
 │   │   ├── sensor_state/                ← five-layer data model
 │   │   ├── zigbee_bridge/               ← NEW: UART bridge client (C6 side)
@@ -230,7 +230,7 @@ thermostat/
     ├── sdkconfig.defaults
     ├── main/main.c
     ├── components/
-    │   ├── hal/                         ← H2 HAL (minimal: UART, GPIO, NVS)
+    │   ├── bsp/                         ← H2 HAL (named "bsp"; IDF reserves "hal"); minimal: UART, GPIO, NVS
     │   ├── zigbee_coordinator/          ← esp-zigbee-sdk coordinator
     │   │   ├── include/
     │   │   ├── zigbee_coordinator.c
@@ -288,33 +288,34 @@ thermostat/
 ## Module completion checklist
 
 ### Shared / infrastructure
-- [ ] Repo structure (thermostat/firmware-c6/ + thermostat/firmware-h2/)
-- [ ] Shared `uart_bridge.h` protocol definition
-- [ ] `docs/architecture/uart-bridge-protocol.md`
+- [x] Repo structure (thermostat/firmware-c6/ + thermostat/firmware-h2/)
+- [x] Shared `uart_bridge_protocol.h` protocol definition
+- [x] `docs/architecture/uart-bridge-protocol.md`
 - [ ] Combined OTA packaging script
 
 ### firmware-h2 (simpler — do first to validate Zigbee)
-- [ ] H2 project scaffold + sdkconfig
+- [x] H2 project scaffold + sdkconfig
 - [ ] `zigbee_coordinator` (coordinator role, network formation)
 - [ ] `zigbee_cluster_handler` (attribute → bridge message)
-- [ ] `uart_bridge` (H2 server side — send reports, receive commands)
+- [x] `uart_bridge` (H2 server side — transport/RX/heartbeat done; command dispatch stubbed)
+- [ ] H2 `bsp` HAL (UART/GPIO/NVS) — **known gap:** `uart_bridge.c` includes `driver/uart.h` directly, bypassing the HAL boundary (hal-design.md applies to both firmwares). Route UART through a `hal_uart` when the H2 `bsp` lands.
 - [ ] `test_cluster_handler.c` green
-- [ ] `test_uart_bridge_framing.c` green
+- [x] `test_uart_bridge_framing.c` green
 - [ ] Zigbee pairing: Sonoff SNZB-02P on real hardware
 - [ ] UART bridge integration with C6
 
 ### firmware-c6 (build on validated H2)
-- [ ] C6 project scaffold + sdkconfig (no Zigbee in REQUIRES)
-- [ ] `platform/` (host/qemu/target)
+- [x] C6 project scaffold + sdkconfig (no Zigbee in REQUIRES)
+- [~] `platform/` (partial: host/target compat shim `platform_compat.h`; qemu + full timing abstraction TBD)
 - [ ] `config/thermostat_config.h`
-- [ ] `sensor_state` + `data_model.h` + `cluster_map`
+- [x] `sensor_state` + `data_model.h` + `cluster_map`
 - [ ] `zigbee_bridge` (C6 client — receive H2 UART messages → state store)
-- [ ] `hal_gpio` (relays, LED) + mock + tests green
+- [x] `hal_gpio` (relays, LED) + mock + tests green — component dir is `components/bsp/` (see note)
 - [ ] `hal_spi` + `hal_i2c` + `hal_ledc` (DISPLAY_LCD)
 - [ ] `hal_segment` (DISPLAY_SEGMENT)
 - [ ] `hal_ble` (commissioning)
 - [ ] `hal_nvs` | `hal_ota` | `hal_wifi` | `hal_timer` | `hal_wdt`
-- [ ] `control_loop` + tests green
+- [x] `control_loop` + tests green (relay hysteresis, modes, dry-contact lockout) + 1 Hz RT-01 control task (`control_task.c`)
 - [ ] `ota_manager` + `ota_transport_menu` + H2 flashing via UART + tests green
 - [ ] `bacnet_server` + object model + tests green
 - [ ] `commissioning_ble`

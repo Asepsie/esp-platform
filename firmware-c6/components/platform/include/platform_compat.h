@@ -31,8 +31,11 @@ typedef SemaphoreHandle_t platform_mutex_t;
 static inline platform_mutex_t platform_mutex_create(void) {
     return xSemaphoreCreateMutex();
 }
-static inline bool platform_mutex_lock(platform_mutex_t m) {
-    return xSemaphoreTake(m, portMAX_DELAY) == pdTRUE;
+// Acquire with a FINITE timeout (ms). Returns false on timeout so callers in
+// high-priority tasks never block indefinitely (RT-02). Pick the timeout from
+// the mutex's RT-05 hold budget plus slack.
+static inline bool platform_mutex_lock(platform_mutex_t m, uint32_t timeout_ms) {
+    return xSemaphoreTake(m, pdMS_TO_TICKS(timeout_ms)) == pdTRUE;
 }
 static inline void platform_mutex_unlock(platform_mutex_t m) {
     xSemaphoreGive(m);
@@ -55,6 +58,7 @@ typedef int esp_err_t;
 #define ESP_ERR_INVALID_STATE   0x103
 #define ESP_ERR_NOT_FOUND       0x105
 #define ESP_ERR_NOT_SUPPORTED   0x106
+#define ESP_ERR_TIMEOUT         0x107
 
 typedef void *platform_mutex_t;
 
@@ -62,8 +66,10 @@ static inline platform_mutex_t platform_mutex_create(void) {
     static int dummy;       // any stable non-NULL handle
     return &dummy;
 }
-static inline bool platform_mutex_lock(platform_mutex_t m) {
+// Host build is single-threaded: the lock always succeeds; timeout is ignored.
+static inline bool platform_mutex_lock(platform_mutex_t m, uint32_t timeout_ms) {
     (void)m;
+    (void)timeout_ms;
     return true;
 }
 static inline void platform_mutex_unlock(platform_mutex_t m) {

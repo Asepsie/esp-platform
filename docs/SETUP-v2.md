@@ -308,7 +308,7 @@ cppcheck \
     --error-exitcode=1 \
     --suppress=missingIncludeSystem \
     --suppress=unusedFunction \
-    -I components/hal/include \
+    -I components/bsp/include \
     -I components/sensor_state/include \
     -I components/control/include \
     -I config \
@@ -329,7 +329,7 @@ cat > Doxyfile << 'EOF'
 PROJECT_NAME           = "Thermostat Firmware"
 PROJECT_NUMBER         = 1.0.0
 OUTPUT_DIRECTORY       = docs/api
-INPUT                  = components/hal/include \
+INPUT                  = components/bsp/include \
                          components/sensor_state/include \
                          components/control/include \
                          components/bacnet/include \
