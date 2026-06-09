@@ -307,14 +307,14 @@ thermostat/
 ### firmware-c6 (build on validated H2)
 - [x] C6 project scaffold + sdkconfig (no Zigbee in REQUIRES)
 - [~] `platform/` (host/target compat shim `platform_compat.h` done; `hal_timer` provides the RT-08 timing abstraction; QEMU variant TBD)
-- [ ] `config/thermostat_config.h`
+- [x] `config/thermostat_config.h` — single source of compile-time constants; consumed by data_model/control/bsp; global `-I config` (target) + host include
 - [x] `sensor_state` + `data_model.h` + `cluster_map`
 - [ ] `zigbee_bridge` (C6 client — receive H2 UART messages → state store)
 - [x] `hal_gpio` (relays, LED) + mock + tests green — component dir is `components/bsp/` (see note)
 - [ ] `hal_spi` + `hal_i2c` + `hal_ledc` (DISPLAY_LCD)
 - [ ] `hal_segment` (DISPLAY_SEGMENT)
 - [ ] `hal_ble` (commissioning)
-- [~] `hal_nvs` ✓ (write-coalescing, commit counter → BACnet AI 303, corruption recovery) · `hal_timer` ✓ · `hal_wdt` ✓ — target + mock + host tests green · `hal_ota` · `hal_wifi` (remaining)
+- [~] `hal_nvs` ✓ (write-coalescing, commit counter → BACnet AI 303, corruption recovery) · `hal_timer` ✓ (RT-08; deterministic sim-clock mock) · `hal_wdt` ✓ (RT-07; `init(timeout_s)`) — `control_task` drives both (TWDT timeout from `TASK_WDT_TIMEOUT_S`); target + mock + host tests green · `hal_ota` · `hal_wifi` (remaining)
 - [x] `control_loop` + tests green (relay hysteresis, modes, dry-contact lockout) + 1 Hz RT-01 control task (`control_task.c`)
 - [ ] `ota_manager` + `ota_transport_menu` + H2 flashing via UART + tests green
 - [ ] `bacnet_server` + object model + tests green

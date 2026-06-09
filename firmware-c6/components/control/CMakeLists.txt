@@ -2,7 +2,7 @@
 #
 #   control_loop.c — pure decision + relay actuation (host-unit-tested)
 #   control_task.c — RT-01 FreeRTOS task driving control_loop_tick() at 1 Hz
-#                    (target-only; needs freertos + esp_task_wdt from esp_system)
+#                    (target-only; watchdog/timing via bsp hal_wdt/hal_timer)
 idf_component_register(SRCS "control_loop.c" "control_task.c"
                        INCLUDE_DIRS "include"
-                       REQUIRES bsp sensor_state data_model platform esp_system)
+                       REQUIRES bsp sensor_state data_model platform)

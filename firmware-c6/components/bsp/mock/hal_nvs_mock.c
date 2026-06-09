@@ -17,6 +17,7 @@
  * tests exercise. Plain POSIX, no ESP-IDF. Keys must be filename-safe.
  */
 #include "hal_nvs_mock.h"
+#include "thermostat_config.h"  // HAL_NVS_COALESCE_MS
 
 #include <stdio.h>
 #include <string.h>
@@ -27,7 +28,6 @@
 
 #define HAL_NVS_DIR          "/tmp/nvs_sim"
 #define HAL_NVS_COUNT_KEY    "__hal_nvs_writes"
-#define HAL_NVS_COALESCE_MS  2000u
 
 static bool     s_inited;
 static bool     s_dirty;

@@ -1,25 +1,33 @@
 /**
  * @file hal_timer_mock.c
- * @brief Host mock of the timing HAL — real monotonic clock + sleep.
+ * @brief Host mock of the timing HAL — deterministic simulated clock.
  *
- * Uses CLOCK_MONOTONIC and usleep() so host tests observe genuine elapsed time
- * (the timer tests assert monotonicity and delay duration). Plain POSIX, no
- * ESP-IDF. No extra helpers, so there is no hal_timer_mock.h.
+ * Time is a plain counter, not the wall clock: get_ms() reads it, delay_ms()
+ * advances it (no real sleep), and hal_timer_mock_advance_ms() advances it
+ * explicitly. This makes time-dependent tests exact and fast. Plain C, no
+ * ESP-IDF.
  */
 #include "hal_timer.h"
+#include "hal_timer_mock.h"
 
-#include <time.h>
-#include <unistd.h>
-#include <stdint.h>
+static uint32_t s_now_ms;
 
 uint32_t hal_timer_get_ms(void)
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint32_t)((uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u);
+    return s_now_ms;
 }
 
 void hal_timer_delay_ms(uint32_t ms)
 {
-    usleep((useconds_t)ms * 1000u);
+    s_now_ms += ms; // a delay deterministically moves simulated time forward
+}
+
+void hal_timer_mock_advance_ms(uint32_t ms)
+{
+    s_now_ms += ms;
+}
+
+void hal_timer_mock_reset(void)
+{
+    s_now_ms = 0;
 }

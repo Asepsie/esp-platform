@@ -23,9 +23,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
+#include "thermostat_config.h"  // HAL_NVS_COALESCE_MS
+
 #define HAL_NVS_NAMESPACE        "hal_kv"
 #define HAL_NVS_WRITE_COUNT_KEY  "__hal_nvs_writes"
-#define HAL_NVS_COALESCE_US      (2000 * 1000)  // 2 s commit coalescing window
+#define HAL_NVS_COALESCE_US      (HAL_NVS_COALESCE_MS * 1000)  // commit coalescing window
 
 static nvs_handle_t       s_handle;
 static bool               s_inited;

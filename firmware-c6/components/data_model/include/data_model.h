@@ -19,13 +19,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// --- Compile-time capacities (data-model §2.1, §3.1, §3.3, §4.3) -------------
-#define MAX_ZB_DEVICES              8
-#define MAX_ZB_CLUSTERS             8
-#define MAX_BINDINGS_PER_EQUIPMENT  8
-#define MAX_EQUIPMENT               4
-#define MAX_SPACES                  4
-#define MAX_EQUIPMENT_PER_SPACE     4
+// Compile-time capacities (MAX_ZB_DEVICES, MAX_EQUIPMENT, MAX_SPACES, ...) are
+// defined centrally in config/thermostat_config.h — the single source of truth.
+#include "thermostat_config.h"
 
 // Common string field sizes (kept as named constants for clarity/reuse).
 #define IEEE_ADDR_STR_LEN   24   // e.g. "0x00158d0001234567"

@@ -52,6 +52,10 @@ project(firmware_c6_host_tests C)
 
 enable_testing()   # turn on ctest support
 
+# config/thermostat_config.h is the single source of compile-time constants;
+# data_model.h (and others) include it. Make it visible to every host test.
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../config)
+
 # --- Unity test framework -----------------------------------------------------
 # Vendored under unity/ (see unity/README.md) so host tests have zero ESP-IDF
 # dependency. Built once as a static lib and reused by every test executable.
@@ -132,12 +136,13 @@ target_include_directories(test_hal_nvs PRIVATE
     ../../components/bsp/mock
     ../../components/platform/include)
 
-# hal_timer: real CLOCK_MONOTONIC + usleep mock (no extra mock header).
+# hal_timer: deterministic simulated-clock mock (advance/reset helpers).
 add_host_test(test_hal_timer
     tests/test_hal_timer.c
     ../../components/bsp/mock/hal_timer_mock.c)
 target_include_directories(test_hal_timer PRIVATE
-    ../../components/bsp/include)
+    ../../components/bsp/include
+    ../../components/bsp/mock)
 
 # hal_wdt: no-op call-tracking mock.
 add_host_test(test_hal_wdt

@@ -16,6 +16,7 @@
 
 #include <stdint.h>
 #include "hal_gpio.h"
+#include "thermostat_config.h"   /* H2_EN_GPIO (board pin constants) */
 
 /** @brief Physical definition of one logical GPIO line. */
 typedef struct {
@@ -33,7 +34,7 @@ static const hal_pin_def_t HAL_PIN_MAP[HAL_GPIO_COUNT] = {
     [HAL_GPIO_RELAY_COOL] = { .gpio_num = 1  }, /* RELAY_COOL */
     [HAL_GPIO_RELAY_FAN]  = { .gpio_num = 2  }, /* RELAY_FAN  */
     [HAL_GPIO_STATUS_LED] = { .gpio_num = 15 }, /* STATUS_LED (strapping, ext pull-down) */
-    [HAL_GPIO_H2_EN]      = { .gpio_num = 11 }, /* H2_EN (hard reset via 10kΩ) */
+    [HAL_GPIO_H2_EN]      = { .gpio_num = H2_EN_GPIO }, /* H2_EN (hard reset via 10kΩ) */
 };
 
 #endif /* HAL_PIN_MAP_H */
