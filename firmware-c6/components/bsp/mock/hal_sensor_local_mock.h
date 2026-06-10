@@ -21,6 +21,12 @@ void hal_sensor_local_mock_set(float temp, float rh);
 /** @brief Set whether the sensor reports as available/present. */
 void hal_sensor_local_mock_set_available(bool available);
 
+/** @brief Number of hal_sensor_local_read() calls since the last reset. */
+unsigned hal_sensor_local_mock_read_count(void);
+
+/** @brief Reset the read counter (call from a test's setUp()). */
+void hal_sensor_local_mock_reset(void);
+
 #ifdef __cplusplus
 }
 #endif

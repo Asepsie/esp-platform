@@ -17,6 +17,11 @@ uint32_t hal_timer_get_ms(void)
     return s_now_ms;
 }
 
+uint32_t hal_timer_get_us(void)
+{
+    return s_now_ms * 1000u; // simulated: µs derived from the ms counter
+}
+
 void hal_timer_delay_ms(uint32_t ms)
 {
     s_now_ms += ms; // a delay deterministically moves simulated time forward

@@ -140,6 +140,28 @@ target_include_directories(test_hal_timer PRIVATE
     ../../components/bsp/include
     ../../components/bsp/mock)
 
+# io_scan: pipelined wired-I/O scan against the expander + SHT40 + timer mocks.
+# The I/O counts are enabled here (config defaults them to 0) so the expander
+# phases run.
+add_host_test(test_io_scan
+    tests/test_io_scan.c
+    ../../components/io_scan/io_scan.c
+    ../../components/bsp/mock/hal_i2c_expander_mock.c
+    ../../components/bsp/mock/hal_sensor_local_mock.c
+    ../../components/bsp/mock/hal_timer_mock.c
+    ../../components/sensor_state/sensor_state.c
+    ../../components/cluster_map/cluster_map.c)
+target_include_directories(test_io_scan PRIVATE
+    ../../components/io_scan/include
+    ../../components/bsp/include
+    ../../components/bsp/mock
+    ../../components/sensor_state/include
+    ../../components/cluster_map/include
+    ../../components/data_model/include
+    ../../components/platform/include)
+target_compile_definitions(test_io_scan PRIVATE
+    IO_MCP23017_COUNT=1 IO_ADS1115_COUNT=1 IO_MCP4728_COUNT=1)
+
 # hal_wdt: no-op call-tracking mock.
 add_host_test(test_hal_wdt
     tests/test_hal_wdt.c

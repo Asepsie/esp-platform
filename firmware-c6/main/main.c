@@ -11,6 +11,7 @@
 #include "hal_wdt.h"
 #include "sensor_state.h"
 #include "zigbee_bridge.h"
+#include "io_scan.h"
 #include "control_loop.h"
 #include "control_task.h"
 #include "thermostat_config.h"   // TASK_WDT_TIMEOUT_S
@@ -81,13 +82,20 @@ void app_main(void)
         enter_fault("zigbee_bridge_init", err);
     }
 
-    // 7. Control loop for the single zone (relays start off).
+    // 7. Wired-I/O scan (expanders + onboard SHT40). Driven each tick by
+    //    control_loop_tick(); a no-op for unfitted expanders (config counts = 0).
+    err = io_scan_init();
+    if (err != ESP_OK) {
+        enter_fault("io_scan_init", err);
+    }
+
+    // 8. Control loop for the single zone (relays start off).
     err = control_loop_init("zone_a");
     if (err != ESP_OK) {
         enter_fault("control_loop_init", err);
     }
 
-    // 8. Start the 1 Hz control task (RT-01) that drives control_loop_tick().
+    // 9. Start the 1 Hz control task (RT-01) that drives control_loop_tick().
     err = control_task_start();
     if (err != ESP_OK) {
         enter_fault("control_task_start", err);

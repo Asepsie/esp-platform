@@ -19,6 +19,7 @@
 #include "control_loop.h"
 #include "sensor_state.h"
 #include "zigbee_bridge.h"
+#include "io_scan.h"
 #include "hal_timer.h"
 #include "hal_wdt.h"
 
@@ -43,6 +44,10 @@ static TaskHandle_t s_task_handle;
 // pure decision logic in control_loop.c stays free of sensor_state/zigbee_bridge.
 void control_loop_tick(void)
 {
+    // Wired-I/O scan first (DI/AI in, DO/AO out, SHT40 every 10th tick). Its
+    // SHT40 reading feeds sensor_state as the control loop's local fallback.
+    (void)io_scan_tick();
+
     control_recipe_t recipe;
     if (sensor_state_get_recipe(&recipe) != ESP_OK) {
         return;

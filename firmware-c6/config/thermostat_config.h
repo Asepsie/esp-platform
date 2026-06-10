@@ -107,6 +107,31 @@
 /** @} */
 
 /**
+ * @defgroup cfg_io I/O expansion
+ * @brief Optional wired I/O expanders (set counts to 0 to disable). Counts are
+ *        @c \#ifndef-guarded so test builds can enable them via -D overrides.
+ * @{
+ */
+#ifndef IO_MCP23017_COUNT
+#define IO_MCP23017_COUNT       0     /**< MCP23017 16-bit DIO expanders: 0/1/2. */
+#endif
+#define IO_MCP23017_ADDR_1      0x20
+#define IO_MCP23017_ADDR_2      0x21
+#ifndef IO_ADS1115_COUNT
+#define IO_ADS1115_COUNT        0     /**< ADS1115 4ch 16-bit ADCs: 0/1/2. */
+#endif
+#define IO_ADS1115_ADDR_1       0x48
+#define IO_ADS1115_ADDR_2       0x49
+#ifndef IO_MCP4728_COUNT
+#define IO_MCP4728_COUNT        0     /**< MCP4728 4ch 12-bit DAC: 0/1. */
+#endif
+#define IO_MCP4728_ADDR         0x60
+
+#define IO_SCAN_SHT40_INTERVAL  10    /**< Read the local SHT40 every N scan ticks. */
+#define IO_SCAN_SAFETY_GPIO     14    /**< MCP23017 INT → GPIO14 (fast safety DI). */
+/** @} */
+
+/**
  * @defgroup cfg_nvs NVS
  * @brief Non-volatile storage behaviour.
  * @{

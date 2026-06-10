@@ -9,9 +9,10 @@
 
 #include "platform_compat.h"   /* esp_err_t */
 
-static float s_temp = 20.0f;
-static float s_rh   = 50.0f;
-static bool  s_available;
+static float    s_temp = 20.0f;
+static float    s_rh   = 50.0f;
+static bool     s_available;
+static unsigned s_read_count;
 
 esp_err_t hal_sensor_local_init(void)
 {
@@ -27,9 +28,21 @@ esp_err_t hal_sensor_local_read(float *temp_c, float *rh_pct)
     if (!s_available) {
         return ESP_ERR_INVALID_STATE;
     }
+    s_read_count++;
     *temp_c = s_temp;
     *rh_pct = s_rh;
     return ESP_OK;
+}
+
+unsigned hal_sensor_local_mock_read_count(void)
+{
+    return s_read_count;
+}
+
+void hal_sensor_local_mock_reset(void)
+{
+    s_read_count = 0;
+    s_available = false;
 }
 
 bool hal_sensor_local_is_available(void)

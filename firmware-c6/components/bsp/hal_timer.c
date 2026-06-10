@@ -16,6 +16,11 @@ uint32_t hal_timer_get_ms(void)
     return (uint32_t)(esp_timer_get_time() / 1000);
 }
 
+uint32_t hal_timer_get_us(void)
+{
+    return (uint32_t)esp_timer_get_time();
+}
+
 void hal_timer_delay_ms(uint32_t ms)
 {
     vTaskDelay(pdMS_TO_TICKS(ms));

@@ -30,6 +30,16 @@ extern "C" {
 uint32_t hal_timer_get_ms(void);
 
 /**
+ * @brief Microseconds since boot from the monotonic clock.
+ *
+ * For short-interval measurements (e.g. I/O scan duration). Wraps after
+ * ~71 minutes (uint32 µs); use unsigned subtraction for elapsed time.
+ *
+ * @return Monotonic microseconds.
+ */
+uint32_t hal_timer_get_us(void);
+
+/**
  * @brief Block the caller for at least @p ms milliseconds.
  *
  * On target this yields to the scheduler (`vTaskDelay`); on host it sleeps the

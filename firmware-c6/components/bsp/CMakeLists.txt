@@ -11,6 +11,7 @@
 # Pin numbers live in private/ (PRIV_INCLUDE_DIRS) so they stay HAL-internal.
 idf_component_register(SRCS "hal_gpio.c" "hal_nvs.c" "hal_timer.c" "hal_wdt.c"
                             "hal_uart.c" "hal_uart_mstp.c" "hal_i2c.c" "hal_sensor_local.c"
+                            "hal_i2c_expander.c"
                        INCLUDE_DIRS "include"
                        PRIV_INCLUDE_DIRS "private"
                        REQUIRES platform
