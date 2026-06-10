@@ -286,6 +286,16 @@ esp_err_t sensor_state_register_device(const zb_device_t *device)
     return ESP_OK;
 }
 
+uint8_t sensor_state_get_device_count(void)
+{
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return s.device_count; // unlocked read fallback (rare)
+    }
+    uint8_t n = s.device_count;
+    platform_mutex_unlock(s.mutex);
+    return n;
+}
+
 esp_err_t sensor_state_set_device_online(const char *ieee, bool online)
 {
     if (ieee == NULL) {

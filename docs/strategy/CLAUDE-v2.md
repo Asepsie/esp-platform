@@ -309,7 +309,7 @@ thermostat/
 - [~] `platform/` (host/target compat shim `platform_compat.h` done; `hal_timer` provides the RT-08 timing abstraction; QEMU variant TBD)
 - [x] `config/thermostat_config.h` — single source of compile-time constants; consumed by data_model/control/bsp; global `-I config` (target) + host include
 - [x] `sensor_state` + `data_model.h` + `cluster_map`
-- [ ] `zigbee_bridge` (C6 client — receive H2 UART messages → state store)
+- [x] `zigbee_bridge` (C6 client — RX task via hal_uart → decode → cluster map → state store → aggregation; H2 heartbeat watchdog; 6 host tests for the full data path) + C6 `hal_uart`
 - [x] `hal_gpio` (relays, LED) + mock + tests green — component dir is `components/bsp/` (see note)
 - [ ] `hal_spi` + `hal_i2c` + `hal_ledc` (DISPLAY_LCD)
 - [ ] `hal_segment` (DISPLAY_SEGMENT)

@@ -42,6 +42,9 @@ esp_err_t sensor_state_set_device_online(const char *ieee, bool online);
 esp_err_t sensor_state_update_attribute(const char *ieee, uint16_t cluster,
                                         uint16_t attr, float value);
 
+// Number of registered Zigbee devices (diagnostic / test observability).
+uint8_t sensor_state_get_device_count(void);
+
 // --- Layer 3 reads (control loop, BACnet task, LVGL) -------------------------
 // Copy a space (including freshly aggregated data) by id.
 esp_err_t sensor_state_get_space(const char *space_id, space_t *out);

@@ -152,3 +152,25 @@ target_include_directories(test_hal_wdt PRIVATE
     ../../components/bsp/include
     ../../components/bsp/mock
     ../../components/platform/include)
+
+# zigbee_bridge: end-to-end H2-report → frame → decode → cluster map → store →
+# aggregation. Real core + framing + sensor_state + cluster_map; the mock injects
+# frames in place of the UART RX task; hal_timer mock gives a controllable clock.
+add_host_test(test_zigbee_bridge
+    tests/test_zigbee_bridge.c
+    ../../components/zigbee_bridge/zigbee_bridge.c
+    ../../components/zigbee_bridge/mock/zigbee_bridge_mock.c
+    ../../components/zigbee_bridge/uart_bridge_framing.c
+    ../../components/sensor_state/sensor_state.c
+    ../../components/cluster_map/cluster_map.c
+    ../../components/bsp/mock/hal_timer_mock.c)
+target_include_directories(test_zigbee_bridge PRIVATE
+    ../../components/zigbee_bridge/include
+    ../../components/zigbee_bridge
+    ../../components/zigbee_bridge/mock
+    ../../components/sensor_state/include
+    ../../components/cluster_map/include
+    ../../components/data_model/include
+    ../../components/bsp/include
+    ../../components/bsp/mock
+    ../../components/platform/include)

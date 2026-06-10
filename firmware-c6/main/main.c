@@ -7,6 +7,7 @@
 #include "hal_gpio.h"
 #include "hal_nvs.h"
 #include "sensor_state.h"
+#include "zigbee_bridge.h"
 #include "control_loop.h"
 #include "control_task.h"
 
@@ -36,7 +37,11 @@ void app_main(void)
     ESP_ERROR_CHECK(hal_gpio_init());
     ESP_ERROR_CHECK(hal_gpio_set(HAL_GPIO_H2_EN, true));
 
-    // 4. Control loop for the single zone (relays start off), then the 1 Hz
+    // 4. UART bridge to the H2: starts the RX task that feeds Zigbee sensor
+    //    reports / joins into the state store.
+    ESP_ERROR_CHECK(zigbee_bridge_init());
+
+    // 5. Control loop for the single zone (relays start off), then the 1 Hz
     //    control task (RT-01) that drives control_loop_tick().
     ESP_ERROR_CHECK(control_loop_init("zone_a"));
     ESP_ERROR_CHECK(control_task_start());
