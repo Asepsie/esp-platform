@@ -316,6 +316,7 @@ thermostat/
 - [ ] `hal_ble` (commissioning)
 - [~] `hal_nvs` ✓ (write-coalescing, commit counter → BACnet AI 303, corruption recovery) · `hal_timer` ✓ (RT-08; deterministic sim-clock mock) · `hal_wdt` ✓ (RT-07; `init(timeout_s)`) — `control_task` drives both (TWDT timeout from `TASK_WDT_TIMEOUT_S`); target + mock + host tests green · `hal_ota` · `hal_wifi` (remaining)
 - [x] `control_loop` + tests green (relay hysteresis, modes, dry-contact lockout) + 1 Hz RT-01 control task (`control_task.c`)
+- [x] `app_main` init chain — nvs → gpio(+H2_EN) → wdt → sensor_state → zigbee_bridge → control_loop → control_task; every init checked, status-LED fault pattern + halt on failure (no abort)
 - [ ] `ota_manager` + `ota_transport_menu` + H2 flashing via UART + tests green
 - [ ] `bacnet_server` + object model + tests green
 - [ ] `commissioning_ble`

@@ -25,7 +25,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
-#include "thermostat_config.h"  // RT-01 budget + TASK_WDT_TIMEOUT_S
+#include "thermostat_config.h"  // RT-01 budget: CONTROL_LOOP_PERIOD_MS/_PRIORITY/_STACK_SIZE
 
 // Tolerance before a late wake-up is counted as a deadline miss (RT-09).
 #define CONTROL_DEADLINE_SLACK_MS 10
@@ -70,11 +70,8 @@ esp_err_t control_task_start(void)
     if (s_task_handle != NULL) {
         return ESP_ERR_INVALID_STATE; // already started
     }
-    // RT-07: set the watchdog timeout before any task subscribes.
-    esp_err_t werr = hal_wdt_init(TASK_WDT_TIMEOUT_S);
-    if (werr != ESP_OK) {
-        return werr;
-    }
+    // The watchdog timeout is configured once by app_main (hal_wdt_init);
+    // the task itself subscribes via hal_wdt_add_current_task() at entry.
     s_task_handle = xTaskCreateStatic(control_task, "control",
                                       CONTROL_LOOP_STACK_SIZE, NULL,
                                       CONTROL_LOOP_PRIORITY,
