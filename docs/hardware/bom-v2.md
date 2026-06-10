@@ -17,14 +17,21 @@
 | RC snubber ×3 (R+C) | $0.24 | $0.24 | $0.24 |
 | PC817 optocoupler ×3 | $0.24 | $0.24 | $0.24 |
 | MCP23017 I/O expander | — | $0.65 | $0.65 |
+| MAX485/SP3485 RS-485 transceiver (+passives) | $0.38 | $0.38 | $0.38 |
+| SHT40 onboard temp/RH sensor | $0.80 | $0.80 | $0.80 |
 | Power supply (24VAC→3.3V) | $1.40 | $1.40 | $1.40 |
 | Passives + connectors | $1.20 | $1.30 | $1.10 |
 | PCB (4-layer FR4, ENIG) | $2.40 | $2.40 | $2.40 |
 | PCBA (SMT + THT + AOI) | $2.80 | $2.80 | $2.80 |
 | Enclosure (ABS injection) | $2.20 | $1.80 | $1.40 |
 | Packaging + mounting | $1.00 | $0.80 | $0.60 |
-| **Total BOM** | **$19.56** | **$17.26** | **$16.01** |
-| **Fully loaded COGS (~1.8×)** | **~$35** | **~$31** | **~$29** |
+| **Total BOM** | **$20.74** | **$18.44** | **$17.19** |
+| **Fully loaded COGS (~1.8×)** | **~$37** | **~$33** | **~$31** |
+
+The MAX485 RS-485 transceiver and SHT40 are the **v2.1 common delta (+$1.18)**,
+fitted on every variant (see `architecture/platform-variants.md` §2 and
+`hardware-spec-v2.md` §12). Optional wired-I/O expanders (MCP23017 ×2 / ADS1115 ×2 /
+MCP4728) are fit-to-order and not in these base totals.
 
 **Delta vs single-chip architecture:** +$1.80–2.00 per unit (cost of H2).
 vs the benefit: elimination of the primary reliability risk of the whole platform.
@@ -58,8 +65,11 @@ Annual saving at 10K units: $3,000. At 100K: $30,000.
 
 | Approach | TH-DISPLAY BOM (10K) | Notes |
 |---|---|---|
-| Single C6-N8 (previous) | $17.56 | RF contention risk, temp limitation |
-| Dual C6-N4 + H2 (new) | $19.56 | +$2.00, zero RF contention |
+| Single C6-N8 (previous) | $18.74 | RF contention risk, temp limitation |
+| Dual C6-N4 + H2 (current) | $20.74 | +$2.00, zero RF contention |
+
+Both rows include the v2.1 common delta (+$1.18: RS-485 MS/TP + SHT40), so the
++$2.00 is purely the cost of the H2.
 
 ---
 
@@ -67,9 +77,9 @@ Annual saving at 10K units: $3,000. At 100K: $30,000.
 
 | Volume | BOM | COGS | Target ASP | Gross margin |
 |---|---|---|---|---|
-| 1K | $33 | ~$59 | $120–150 | ~60–61% |
-| 10K | $19.56 | ~$35 | $90–120 | ~71–77% |
-| 100K | $11.50 | ~$21 | $80–110 | ~74–81% |
+| 1K | $35 | ~$62 | $120–150 | ~59–60% |
+| 10K | $20.74 | ~$37 | $90–120 | ~69–76% |
+| 100K | $12.20 | ~$22 | $80–110 | ~73–80% |
 
 Margin profile remains competitive vs incumbents at all volumes.
 
@@ -79,9 +89,9 @@ Margin profile remains competitive vs incumbents at all volumes.
 
 | Product | BOM est (10K) | Market ASP | Est. margin |
 |---|---|---|---|
-| **TH-DISPLAY (dual-MCU)** | **$19.56** | **$90–120** | **~77–80%** |
-| **TH-SEGMENT (dual-MCU)** | **$17.26** | **$80–110** | **~75–78%** |
-| **TH-HEADLESS (dual-MCU)** | **$16.01** | **$70–100** | **~71–77%** |
+| **TH-DISPLAY (dual-MCU)** | **$20.74** | **$90–120** | **~77–80%** |
+| **TH-SEGMENT (dual-MCU)** | **$18.44** | **$80–110** | **~75–78%** |
+| **TH-HEADLESS (dual-MCU)** | **$17.19** | **$70–100** | **~71–77%** |
 | Schneider SE8000 | ~$60–80 est | $250–400 | ~75–80% |
 | Honeywell T6 Pro commercial | ~$25–35 est | $120–200 | ~75–82% |
 | Distech ECB-PTU | ~$50–70 est | $220–350 | ~75–80% |
@@ -90,8 +100,8 @@ Margin profile remains competitive vs incumbents at all volumes.
 
 ## 5. The strategic number (updated)
 
-**This device at 10K volume costs ~$35 fully loaded (TH-DISPLAY).
-At 100K volume: ~$21. Against incumbents at $250–400 ASP.**
+**This device at 10K volume costs ~$37 fully loaded (TH-DISPLAY).
+At 100K volume: ~$22. Against incumbents at $250–400 ASP.**
 
 The +$2 for the H2 does not change the strategic argument.
 It strengthens it: the dual-chip design is what Espressif recommends
@@ -107,23 +117,23 @@ for production-grade deployments. It is not a cost-cut. It is the right architec
 │  C6 (Wi-Fi/BACnet/UI) + H2 (Zigbee)                        │
 │  ST7789 LCD + CST816 + LVGL                                 │
 │  3 relay outputs                                            │
-│  BOM (10K): $19.56 | COGS: ~$35 | ASP: $90–120             │
+│  BOM (10K): $20.74 | COGS: ~$37 | ASP: $90–120             │
 ├─────────────────────────────────────────────────────────────┤
 │  TH-SEGMENT  —  zone controller, technician-facing          │
 │  C6 + H2 | 4-digit 7-seg + status LEDs                     │
 │  3–6 relay outputs + MCP23017 I/O expander                  │
 │  Full –40 to +85°C (C6) / –40 to +105°C (H2)               │
-│  BOM (10K): $17.26 | COGS: ~$31 | ASP: $80–110             │
+│  BOM (10K): $18.44 | COGS: ~$33 | ASP: $80–110             │
 ├─────────────────────────────────────────────────────────────┤
 │  TH-HEADLESS  —  embedded controller, BMS/app-facing        │
 │  C6 + H2 | LEDs only — BLE + BACnet/SC configuration       │
 │  6–12 DO + 4–8 DI + 4–8 AI + 2–4 AO (with expanders)       │
 │  Full –40 to +85°C (C6) / –40 to +105°C (H2)               │
-│  BOM (10K): $16.01 | COGS: ~$29 | ASP: $70–100             │
+│  BOM (10K): $17.19 | COGS: ~$31 | ASP: $70–100             │
 ├─────────────────────────────────────────────────────────────┤
 │  BUNDLE: TH-DISPLAY + TH-HEADLESS                           │
 │  Replaces RP-C + wall sensor                                │
-│  Bundle COGS: ~$64 | ASP: $150–200                          │
+│  Bundle COGS: ~$68 | ASP: $150–200                          │
 │  vs RP-C + wall sensor: $300–600 market                     │
 └─────────────────────────────────────────────────────────────┘
 ```
