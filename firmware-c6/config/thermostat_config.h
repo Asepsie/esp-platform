@@ -97,6 +97,16 @@
 /** @} */
 
 /**
+ * @defgroup cfg_i2c I2C expansion bus
+ * @brief Shared 400 kHz I2C bus (SHT40, touch, MCP23017/ADS1115/MCP4728).
+ * @{
+ */
+#define PINMAP_I2C_EXPANSION_SDA   8       /**< I2C SDA (shared bus). */
+#define PINMAP_I2C_EXPANSION_SCL   9       /**< I2C SCL (shared bus). */
+#define I2C_EXPANSION_FREQ_HZ      400000  /**< Fast mode (400 kHz). */
+/** @} */
+
+/**
  * @defgroup cfg_nvs NVS
  * @brief Non-volatile storage behaviour.
  * @{

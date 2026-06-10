@@ -258,10 +258,26 @@ static void test_nvs_status_diagnostic(void)
     TEST_ASSERT_EQUAL_FLOAT(7.0f, v);
 }
 
+// Local (onboard SHT40) source: unavailable until first update, then round-trips.
+static void test_local_sensor_roundtrip(void)
+{
+    float t = -1.0f, rh = -1.0f;
+    bool avail = true;
+    TEST_ASSERT_EQUAL_INT(ESP_OK, sensor_state_get_local(&t, &rh, &avail));
+    TEST_ASSERT_FALSE(avail); // none yet after init
+
+    TEST_ASSERT_EQUAL_INT(ESP_OK, sensor_state_update_local(22.5f, 48.0f));
+    TEST_ASSERT_EQUAL_INT(ESP_OK, sensor_state_get_local(&t, &rh, &avail));
+    TEST_ASSERT_TRUE(avail);
+    TEST_ASSERT_EQUAL_FLOAT(22.5f, t);
+    TEST_ASSERT_EQUAL_FLOAT(48.0f, rh);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_init_clears_state);
+    RUN_TEST(test_local_sensor_roundtrip);
     RUN_TEST(test_update_attribute_aggregates_into_space);
     RUN_TEST(test_update_unknown_device_rejected);
     RUN_TEST(test_update_unmapped_cluster_rejected);

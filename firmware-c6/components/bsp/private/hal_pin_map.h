@@ -28,6 +28,10 @@
 #define PINMAP_MSTP_UART    0       /* UART_NUM_0 */
 #define PINMAP_MSTP_BAUD    38400   /* configurable 9600–76800 */
 
+/* Onboard SHT40 temp/RH sensor. Shares the I2C expansion bus (GPIO8/9) with the
+ * CST816 touch (TH-DISPLAY) and the MCP23017/ADS1115/MCP4728 expanders. */
+#define PINMAP_SHT40_ADDR   0x44
+
 /** @brief Physical definition of one logical GPIO line. */
 typedef struct {
     uint8_t gpio_num; /**< ESP32-C6 physical GPIO number. */

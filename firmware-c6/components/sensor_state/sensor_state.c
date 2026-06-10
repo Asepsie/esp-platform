@@ -38,6 +38,12 @@ typedef struct {
     space_t        spaces[MAX_SPACES];
     uint8_t        space_count;
 
+    // Layer 1 — onboard local sensor (SHT40), fallback source for the control loop
+    float          local_temperature;
+    float          local_humidity;
+    bool           local_sensor_available;
+    uint32_t       local_sensor_last_read_ms;
+
     // Layer 4 — active control recipe
     control_recipe_t active_recipe;
 
@@ -282,6 +288,31 @@ esp_err_t sensor_state_register_device(const zb_device_t *device)
     }
     s.devices[s.device_count] = *device;
     s.device_count++;
+    platform_mutex_unlock(s.mutex);
+    return ESP_OK;
+}
+
+esp_err_t sensor_state_update_local(float temp, float rh)
+{
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
+    s.local_temperature = temp;
+    s.local_humidity = rh;
+    s.local_sensor_available = true;
+    s.local_sensor_last_read_ms = platform_now_ms();
+    platform_mutex_unlock(s.mutex);
+    return ESP_OK;
+}
+
+esp_err_t sensor_state_get_local(float *temp, float *rh, bool *available)
+{
+    if (!platform_mutex_lock(s.mutex, STATE_MUTEX_TIMEOUT_MS)) {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (temp != NULL)      *temp = s.local_temperature;
+    if (rh != NULL)        *rh = s.local_humidity;
+    if (available != NULL) *available = s.local_sensor_available;
     platform_mutex_unlock(s.mutex);
     return ESP_OK;
 }

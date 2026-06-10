@@ -5,4 +5,4 @@
 #                    (target-only; watchdog/timing via bsp hal_wdt/hal_timer)
 idf_component_register(SRCS "control_loop.c" "control_task.c"
                        INCLUDE_DIRS "include"
-                       REQUIRES bsp sensor_state data_model platform)
+                       REQUIRES bsp sensor_state data_model platform zigbee_bridge)

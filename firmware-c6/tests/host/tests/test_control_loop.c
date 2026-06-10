@@ -112,6 +112,61 @@ static void test_dry_contact_lockout_all_relays_off(void)
     TEST_ASSERT_FALSE(relay(HAL_GPIO_RELAY_FAN));
 }
 
+// --- source-selection fallback (Zigbee primary → local SHT40 → fault) --------
+
+// H2 online + valid Zigbee temp → uses Zigbee, ignores local.
+static void test_control_uses_zigbee_temp_when_h2_online(void)
+{
+    control_recipe_t r = make_recipe(HVAC_MODE_HEAT); // heat setpoint 21, db 1
+    control_inputs_t in = {
+        .zigbee_temp = 18.0f, .zigbee_valid = true,   // cold via Zigbee → heat
+        .local_temp = 25.0f,  .local_valid = true,    // warm local would NOT heat
+        .dry_contact_active = false,
+    };
+    bool fault = true;
+    TEST_ASSERT_EQUAL_INT(ESP_OK, control_loop_run(&r, &in, &fault));
+    TEST_ASSERT_FALSE(fault);
+    TEST_ASSERT_TRUE(relay(HAL_GPIO_RELAY_HEAT)); // proves Zigbee (18) was used
+}
+
+// H2 offline → falls back to the local SHT40 temperature.
+static void test_control_falls_back_to_local_when_h2_offline(void)
+{
+    control_recipe_t r = make_recipe(HVAC_MODE_HEAT);
+    control_inputs_t in = {
+        .zigbee_temp = 25.0f, .zigbee_valid = false,  // H2 offline → ignore
+        .local_temp = 18.0f,  .local_valid = true,    // cold local → heat
+        .dry_contact_active = false,
+    };
+    bool fault = true;
+    TEST_ASSERT_EQUAL_INT(ESP_OK, control_loop_run(&r, &in, &fault));
+    TEST_ASSERT_FALSE(fault);
+    TEST_ASSERT_TRUE(relay(HAL_GPIO_RELAY_HEAT)); // proves local (18) was used
+}
+
+// Neither source available → fault, and relays hold their previous state.
+static void test_control_faults_when_both_unavailable(void)
+{
+    control_recipe_t r = make_recipe(HVAC_MODE_HEAT);
+
+    // Establish a known state: heating on, from a valid run.
+    control_inputs_t warm = {
+        .zigbee_temp = 18.0f, .zigbee_valid = true,
+        .local_valid = false, .dry_contact_active = false,
+    };
+    TEST_ASSERT_EQUAL_INT(ESP_OK, control_loop_run(&r, &warm, NULL));
+    TEST_ASSERT_TRUE(relay(HAL_GPIO_RELAY_HEAT));
+
+    // Now both sources gone → fault, relays must HOLD (stay on).
+    control_inputs_t none = {
+        .zigbee_valid = false, .local_valid = false, .dry_contact_active = false,
+    };
+    bool fault = false;
+    TEST_ASSERT_EQUAL_INT(ESP_OK, control_loop_run(&r, &none, &fault));
+    TEST_ASSERT_TRUE(fault);
+    TEST_ASSERT_TRUE(relay(HAL_GPIO_RELAY_HEAT)); // unchanged (held)
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -120,5 +175,8 @@ int main(void)
     RUN_TEST(test_temp_in_deadband_no_relay_change);
     RUN_TEST(test_mode_off_all_relays_off);
     RUN_TEST(test_dry_contact_lockout_all_relays_off);
+    RUN_TEST(test_control_uses_zigbee_temp_when_h2_online);
+    RUN_TEST(test_control_falls_back_to_local_when_h2_offline);
+    RUN_TEST(test_control_faults_when_both_unavailable);
     return UNITY_END();
 }

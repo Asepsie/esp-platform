@@ -71,12 +71,42 @@ relay_state_t control_loop_decide(const control_recipe_t *recipe,
 esp_err_t control_loop_run_once(const control_recipe_t *recipe,
                                 float temperature_c, bool dry_contact_active);
 
+/** @brief Temperature sources + interlocks for one control decision. */
+typedef struct {
+    float zigbee_temp;        /**< Aggregated Zigbee/H2 temperature (°C). */
+    bool  zigbee_valid;       /**< H2 online AND a fresh Zigbee reading.  */
+    float local_temp;         /**< Onboard SHT40 temperature (°C).        */
+    bool  local_valid;        /**< Local sensor present + reading fresh.  */
+    bool  dry_contact_active; /**< Dry-contact interlock asserted.        */
+} control_inputs_t;
+
+/**
+ * @brief Run one decision selecting the temperature source, and drive relays.
+ *
+ * Source priority (data-model fallback): Zigbee primary → local SHT40 fallback.
+ *  - @c zigbee_valid → use @c zigbee_temp.
+ *  - else @c local_valid → use @c local_temp.
+ *  - else → no source: set @p fault, HOLD the last relay state (no change).
+ *
+ * @param recipe Active recipe (NULL ⇒ error).
+ * @param in     Source inputs (NULL ⇒ error).
+ * @param[out] fault Set true if no temperature source was available (else false).
+ *                   May be NULL.
+ * @return @c ESP_OK, @c ESP_ERR_INVALID_ARG, or an @c esp_err_t from the HAL.
+ */
+esp_err_t control_loop_run(const control_recipe_t *recipe,
+                           const control_inputs_t *in, bool *fault);
+
+/** @brief Space id this loop controls (set at init; used by control_loop_tick). */
+const char *control_loop_space_id(void);
+
 /**
  * @brief Periodic firmware entry point (RT-01 control_loop task, 1 Hz).
  *
- * Reads the controlled space's aggregated temperature + dry-contact and the
- * active recipe from @c sensor_state, then runs one decision. No-op if the
- * recipe or space cannot be read.
+ * Gathers the temperature sources (Zigbee aggregate + H2 liveness, onboard
+ * SHT40) from @c sensor_state / @c zigbee_bridge and runs one decision via
+ * @c control_loop_run(). Defined in control_task.c (target). No-op if the recipe
+ * or space cannot be read.
  */
 void control_loop_tick(void);
 

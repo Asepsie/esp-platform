@@ -2,13 +2,14 @@
  * @file control_loop.c
  * @brief Thermostat control loop implementation.
  *
- * Pure decision logic (@c control_loop_decide) plus the actuation/state-keeping
- * wrappers. Relays are driven exclusively through the GPIO HAL; this file never
- * touches the ESP-IDF drivers. @c control_loop_tick() pulls inputs from sensor_state.
+ * Pure decision logic (@c control_loop_decide), source selection
+ * (@c control_loop_run), and actuation/state-keeping. Relays are driven only
+ * through the GPIO HAL; this file touches no ESP-IDF drivers and no store —
+ * input gathering (sensor_state / zigbee_bridge) lives in control_task.c, so
+ * the decision logic stays pure and host-testable.
  */
 #include "control_loop.h"
 #include "hal_gpio.h"
-#include "sensor_state.h"
 
 #include <string.h>
 
@@ -110,18 +111,35 @@ esp_err_t control_loop_run_once(const control_recipe_t *recipe,
     return err;
 }
 
-void control_loop_tick(void)
+esp_err_t control_loop_run(const control_recipe_t *recipe,
+                           const control_inputs_t *in, bool *fault)
 {
-    control_recipe_t recipe;
-    if (sensor_state_get_recipe(&recipe) != ESP_OK) {
-        return;
+    if (recipe == NULL || in == NULL) {
+        return ESP_ERR_INVALID_ARG;
     }
-    space_t sp;
-    if (sensor_state_get_space(s_space_id, &sp) != ESP_OK) {
-        return;
+
+    float temperature_c;
+    if (in->zigbee_valid) {
+        temperature_c = in->zigbee_temp;     // primary: Zigbee/H2
+    } else if (in->local_valid) {
+        temperature_c = in->local_temp;      // fallback: onboard SHT40
+    } else {
+        // No temperature source: raise fault and HOLD the last relay state.
+        if (fault != NULL) {
+            *fault = true;
+        }
+        return apply_relays(s_relays);
     }
-    (void)control_loop_run_once(&recipe, sp.aggregated.avg_temperature,
-                                sp.aggregated.any_dry_contact);
+
+    if (fault != NULL) {
+        *fault = false;
+    }
+    return control_loop_run_once(recipe, temperature_c, in->dry_contact_active);
+}
+
+const char *control_loop_space_id(void)
+{
+    return s_space_id;
 }
 
 relay_state_t control_loop_get_relays(void)

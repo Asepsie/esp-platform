@@ -45,6 +45,13 @@ esp_err_t sensor_state_update_attribute(const char *ieee, uint16_t cluster,
 // Number of registered Zigbee devices (diagnostic / test observability).
 uint8_t sensor_state_get_device_count(void);
 
+// --- Local (onboard SHT40) sensor source -------------------------------------
+// Update the onboard sensor reading (marks it available; stamps last-read time).
+// Read periodically by io_scan; used by the control loop as a fallback source.
+esp_err_t sensor_state_update_local(float temp, float rh);
+// Read the latest local sensor values + availability (any out-param may be NULL).
+esp_err_t sensor_state_get_local(float *temp, float *rh, bool *available);
+
 // --- Layer 3 reads (control loop, BACnet task, LVGL) -------------------------
 // Copy a space (including freshly aggregated data) by id.
 esp_err_t sensor_state_get_space(const char *space_id, space_t *out);

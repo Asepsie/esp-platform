@@ -18,6 +18,7 @@
 #include "control_task.h"
 #include "control_loop.h"
 #include "sensor_state.h"
+#include "zigbee_bridge.h"
 #include "hal_timer.h"
 #include "hal_wdt.h"
 
@@ -36,6 +37,38 @@ static const char *TAG = "control";
 static StaticTask_t s_task_tcb;
 static StackType_t  s_task_stack[CONTROL_LOOP_STACK_SIZE];
 static TaskHandle_t s_task_handle;
+
+// Gather the temperature sources from the store + H2 liveness, then run one
+// control decision with the Zigbee→local fallback. Defined here (target) so the
+// pure decision logic in control_loop.c stays free of sensor_state/zigbee_bridge.
+void control_loop_tick(void)
+{
+    control_recipe_t recipe;
+    if (sensor_state_get_recipe(&recipe) != ESP_OK) {
+        return;
+    }
+    space_t sp;
+    if (sensor_state_get_space(control_loop_space_id(), &sp) != ESP_OK) {
+        return;
+    }
+
+    control_inputs_t in = {0};
+    // Zigbee is valid only if the H2 is online and the space has a live source.
+    in.zigbee_temp  = sp.aggregated.avg_temperature;
+    in.zigbee_valid = zigbee_bridge_is_h2_online() && (sp.aggregated.online_count > 0);
+
+    bool local_avail = false;
+    sensor_state_get_local(&in.local_temp, NULL, &local_avail);
+    in.local_valid = local_avail;
+
+    in.dry_contact_active = sp.aggregated.any_dry_contact;
+
+    bool fault = false;
+    (void)control_loop_run(&recipe, &in, &fault);
+    if (fault) {
+        ESP_LOGW(TAG, "no temperature source (H2 offline + no local sensor) — holding relays");
+    }
+}
 
 static void control_task(void *arg)
 {

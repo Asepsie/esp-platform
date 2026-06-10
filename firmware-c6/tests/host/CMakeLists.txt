@@ -109,19 +109,15 @@ target_include_directories(test_hal_gpio PRIVATE
     ../../components/bsp/mock
     ../../components/platform/include)
 
-# control_loop: relay decisions, asserted through the GPIO mock. control_loop.c
-# references sensor_state (control_loop_tick), so link sensor_state + cluster_map
-# even though the behavioural tests exercise control_loop_run_once().
+# control_loop: pure relay decisions + source-selection fallback, asserted
+# through the GPIO mock. control_loop.c is now store-free (tick moved to
+# control_task.c), so this links only the loop + the GPIO mock.
 add_host_test(test_control_loop
     tests/test_control_loop.c
     ../../components/control/control_loop.c
-    ../../components/sensor_state/sensor_state.c
-    ../../components/cluster_map/cluster_map.c
     ../../components/bsp/mock/hal_gpio_mock.c)
 target_include_directories(test_control_loop PRIVATE
     ../../components/control/include
-    ../../components/sensor_state/include
-    ../../components/cluster_map/include
     ../../components/data_model/include
     ../../components/bsp/include
     ../../components/bsp/mock
