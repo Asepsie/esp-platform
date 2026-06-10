@@ -33,11 +33,37 @@ Second pair for the permanent bench setup with relay wiring and sensors.
 | Logic analyzer (optional but strongly recommended) | Saleae Logic 8 or cheap clone (24MHz 8ch) | $15–150 |
 | USB current meter | Inline USB-C, measures mA — useful for power budget validation | $10 |
 
-### 1.3 Total
-~$145 for full dev bench (includes both C6 and H2 boards ×2).
-~$65 if skipping logic analyzer and current meter.
+### 1.3 v2.1 expansion peripherals (breakout boards for bring-up)
 
-### 1.4 Notes on sensor selection
+These cover the v2.1 firmware that is currently host-tested only: BACnet MS/TP
+(`hal_uart_mstp`), onboard SHT40 (`hal_sensor_local`), and the wired-I/O scan
+(`hal_i2c_expander` + `io_scan`). All breakouts ride the shared I2C bus
+(GPIO8 SDA / GPIO9 SCL) except RS-485 (UART0) and the RTD front-end (SPI).
+
+| Item | Part / breakout | Bus / addr | Purpose | Qty | ~Price |
+|---|---|---|---|---|---|
+| RS-485 transceiver | MAX485/MAX3485/SP3485 TTL↔RS-485 module | UART0 + DE→GPIO5 | BACnet MS/TP bus driver | 2 | $2 ea |
+| USB↔RS-485 adapter | FTDI or CH340 USB-RS485 dongle | PC side | 2nd MS/TP node + bus sniffer for the C6 under test | 1 | $8 |
+| Termination resistors | 120Ω ¼W | RS-485 bus ends | terminate both ends of the MS/TP segment | 2 | $1 |
+| SHT40 sensor | Adafruit SHT40 (#4885) or generic SHT40 module | I2C 0x44 | onboard temp/RH + control-loop fallback | 1 | $5 |
+| Digital I/O expander | MCP23017 breakout (Adafruit #5346 or generic) | I2C 0x20 / 0x21 | 16 DI/DO each; INT→GPIO14 safety-DI ISR | 2 | $4 ea |
+| 16-bit ADC | ADS1115 breakout (Adafruit #1085 or generic) | I2C 0x48 / 0x49 | 4-ch analog in; PT1000 via differential pair | 2 | $5 ea |
+| 12-bit DAC | MCP4728 breakout (Adafruit #4470) | I2C 0x60 | 4-ch analog out (0–10 V via op-amp stage) | 1 | $7 |
+| RTD front-end (opt) | MAX31865 breakout (Adafruit #3328) | SPI | PT1000 read + open/short fault detect (SEGMENT/HEADLESS) | 1 | $10 |
+| PT1000 probe | 2-wire/3-wire PT1000 RTD element | — | RTD bring-up for MAX31865 + ADS1115 differential | 1 | $6 |
+| 0–10 V output stage (opt) | MCP6002 op-amp + 1% resistors | — | scale MCP4728 0–2.048 V to 0–10 V; skip to probe DAC directly | 1 set | $3 |
+| I2C pull-ups | 4.7kΩ ×2 | GPIO8/9 | only if breakouts don't already populate them | 1 set | $1 |
+| Bench DMM | any 3½-digit multimeter | — | verify DAC/AO voltages, RTD resistance, relay continuity | 1 | $15 |
+
+Expansion-peripheral subtotal: **~$70** (≈$45 without the optional RTD/op-amp/DMM lines).
+
+### 1.4 Total
+~$145 base dev bench (both C6 and H2 boards ×2, Zigbee sensors, relay wiring).
+**+~$70 for the v2.1 expansion breakouts above → ~$215 for a full v2.1 bring-up bench.**
+~$65 if skipping logic analyzer and current meter; ~$110 base + expansion if
+skipping only the optional RTD/op-amp/DMM lines.
+
+### 1.5 Notes on sensor selection
 - All three Sonoff sensors (SNZB-02P, SNZB-CO2, SNZB-04P) are standard Zigbee 3.0.
   They join as ZED (Zigbee End Devices), report standard ZCL clusters,
   and pair cleanly with a Zigbee Coordinator. Validated with Home Assistant / zigbee2mqtt.

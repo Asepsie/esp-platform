@@ -258,10 +258,31 @@ C6 runs continuously for BACnet/SC connection maintenance.
 | Logic analyzer | 24MHz 8-channel clone | Amazon | $15 |
 | USB-C cable ×2 | Quality data cable | Any | $10 |
 | Jumper wires | M-M + M-F assortment | Any | $8 |
-| **Total** | | | **~$132** |
+| **Subtotal (base bench)** | | | **~$132** |
 
 Buy 2× of each dev board. One for each side of the UART bridge.
 You need both running simultaneously to test the bridge protocol.
+
+### v2.1 expansion peripherals (breakout boards)
+
+Needed to bring up the §12 components on real silicon (currently host-tested only).
+All ride the shared I2C bus (GPIO8/9) except RS-485 (UART0) and the RTD front-end (SPI).
+
+| Item | Part / breakout | Bus / addr | Qty | ~Price |
+|---|---|---|---|---|
+| RS-485 transceiver | MAX485/MAX3485/SP3485 TTL↔RS-485 module | UART0 + DE→GPIO5 | 2 | $2 ea |
+| USB↔RS-485 adapter | FTDI/CH340 dongle — 2nd MS/TP node + sniffer | PC side | 1 | $8 |
+| Termination resistors | 120Ω ¼W (both bus ends) | RS-485 | 2 | $1 |
+| SHT40 sensor | Adafruit SHT40 (#4885) or generic module | I2C 0x44 | 1 | $5 |
+| Digital I/O expander | MCP23017 breakout | I2C 0x20/0x21 | 2 | $4 ea |
+| 16-bit ADC | ADS1115 breakout | I2C 0x48/0x49 | 2 | $5 ea |
+| 12-bit DAC | MCP4728 breakout | I2C 0x60 | 1 | $7 |
+| RTD front-end (opt) | MAX31865 breakout + PT1000 probe | SPI | 1 | $16 |
+| 0–10 V stage (opt) | MCP6002 op-amp + 1% resistors | — | 1 set | $3 |
+| I2C pull-ups | 4.7kΩ ×2 (if not on breakouts) | GPIO8/9 | 1 set | $1 |
+| **Subtotal (v2.1 expansion)** | | | | **~$70** |
+
+Detailed prototyping shopping list lives in `docs/SETUP-v2.md` §1.3.
 
 ---
 
