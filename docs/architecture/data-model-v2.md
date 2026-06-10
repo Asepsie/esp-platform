@@ -166,6 +166,26 @@ static const cluster_map_entry_t CLUSTER_MAP[] = {
 
 ---
 
+### 2.4 Additional Layer 1 sources — local sensor + wired I/O
+
+Zigbee (via the H2 bridge) is the **primary** Layer 1 source, but not the only one:
+
+- **Onboard SHT40** (`hal_sensor_local`, I2C 0x44): read by `io_scan` every 10th
+  control tick into `thermostat_state_t.local_*`. It is the **fallback**
+  temperature source for the control loop.
+- **Wired I/O** (`io_scan` + `hal_i2c_expander`): MCP23017 DI/DO, ADS1115 AI,
+  MCP4728 AO. Scanned each control tick (AI is one cycle stale by design).
+
+**Control-loop source fallback** (see `control_loop_run()`):
+
+```
+H2 online AND Zigbee temp valid   → use Zigbee (aggregated space temperature)
+H2 offline OR Zigbee temp stale   → use local SHT40 temperature
+neither available                 → fault alarm + HOLD last relay state
+```
+
+---
+
 ## 3. Layer 2 — Functional: Equipment model
 
 ### 3.1 Data binding
@@ -425,6 +445,7 @@ static const bacnet_object_map_entry_t BACNET_OBJECT_MAP[] = {
     {301, "Diag-ZigbeeLQI",       "Zigbee average LQI",           OBJ_ANALOG_INPUT,  -1, NULL,     false, 1.0f },
     {302, "Diag-BatteryMin",      "Lowest sensor battery %",      OBJ_ANALOG_INPUT,  -1, NULL,     false, 5.0f },
     {303, "Diag-NVSWrites",       "NVS commit count (flash wear)", OBJ_ANALOG_INPUT, -1, NULL,     false, 1.0f },
+    {304, "Diag-IOScanTime",      "I/O scan duration (µs)",        OBJ_ANALOG_INPUT, -1, NULL,     false, 100.0f },
 };
 #define BACNET_OBJECT_MAP_SIZE (sizeof(BACNET_OBJECT_MAP) / sizeof(BACNET_OBJECT_MAP[0]))
 ```
@@ -458,6 +479,12 @@ typedef struct {
     // Layer 3 — spatial topology (written by aggregation pass)
     space_t          spaces[MAX_SPACES];
     uint8_t          space_count;
+
+    // Layer 1 — onboard local sensor (SHT40), fallback when Zigbee/H2 is down
+    float            local_temperature;       ///< °C, written by io_scan (SHT40)
+    float            local_humidity;          ///< %RH
+    bool             local_sensor_available;
+    uint32_t         local_sensor_last_read_ms;
 
     // Layer 4 — active control recipe (written by BACnet task or LVGL UI)
     control_recipe_t active_recipe;

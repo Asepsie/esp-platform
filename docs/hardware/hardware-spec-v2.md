@@ -163,6 +163,16 @@ UART BRIDGE — C6 ↔ H2
   GPIO16  BRIDGE_TX → H2 RX
   GPIO17  BRIDGE_RX ← H2 TX
 
+BACnet MS/TP — RS-485 (UART0)              ← NEW
+  GPIO3   MSTP_TX  → MAX485 DI
+  GPIO4   MSTP_RX  ← MAX485 RO
+  GPIO5   RS485_DE → MAX485 DE+RE (tied)   (high = drive bus / TX)
+
+I2C EXPANSION BUS (shared, 400 kHz)        ← NEW
+  GPIO8   SDA   (shared with CST816 touch + MCP23017/ADS1115/MCP4728)
+  GPIO9   SCL
+  GPIO14  MCP23017 INT → safety-DI ISR (fast digital-input path)
+
 H2 CONTROL
   GPIO11  H2_EN (hard reset via 10kΩ) ← NEW
 
@@ -252,3 +262,76 @@ C6 runs continuously for BACnet/SC connection maintenance.
 
 Buy 2× of each dev board. One for each side of the UART bridge.
 You need both running simultaneously to test the bridge protocol.
+
+---
+
+## 12. Expansion components (v2.1 — MS/TP + SHT40 + wired I/O)
+
+### Added transceivers / sensors / expanders
+
+| Part | Function | Interface | Temp range | Qty 10k | Notes |
+|---|---|---|---|---|---|
+| MAX485 / SP3485 | RS-485 transceiver (BACnet MS/TP) | UART0 + DE | –40…+85 °C | ~$0.15 | DE+RE tied to GPIO5 |
+| SHT40 | Temp/RH sensor (onboard) | I2C 0x44 | –40…+125 °C | $0.80 | ±0.2 °C, ±1.8 % RH |
+| MCP23017 | 16 × digital I/O expander | I2C 0x20/0x21 | –40…+85 °C | $0.65 | INT → GPIO14 (safety DI) |
+| ADS1115 | 4-ch 16-bit ADC, PGA | I2C 0x48/0x49 | –40…+85 °C | $0.90 | 128 SPS; PT1000 via differential |
+| MCP4728 | 4-ch 12-bit DAC | I2C 0x60 | –40…+85 °C | $1.10 | 0–10 V analog out via op-amp |
+
+Added BOM cost: **+$0.38** (RS-485 transceiver + passives) **+$0.80** (SHT40) on
+every board; the MCP/ADS/MCP4728 expanders are fitted only on wired-I/O SKUs.
+
+### I2C address map (shared GPIO8/9 bus @ 400 kHz)
+
+| Address | Device | Driver | Fitted on |
+|---|---|---|---|
+| 0x15 | CST816 touch | ui (future) | TH-DISPLAY |
+| 0x20 | MCP23017 #1 | hal_i2c_expander | wired-I/O |
+| 0x21 | MCP23017 #2 | hal_i2c_expander | wired-I/O (2nd) |
+| 0x44 | SHT40 | hal_sensor_local | all |
+| 0x48 | ADS1115 #1 | hal_i2c_expander | wired-I/O |
+| 0x49 | ADS1115 #2 | hal_i2c_expander | wired-I/O (2nd) |
+| 0x60 | MCP4728 | hal_i2c_expander | wired-I/O (AO) |
+
+All addresses are distinct → no bus conflict; single shared master bus.
+
+---
+
+## 13. Power budget (three-rail)
+
+```
+24VAC ──▶ 5V SMPS (1 A) ──▶ 3.3V LDO (1 A)
+```
+
+| Rail | Consumer | Typ draw |
+|---|---|---|
+| 5 V | relays (3 × HF115F coil ~25 mA) | ~75 mA |
+| 5 V | RS-485 transceiver | ~5 mA |
+| 5 V | LCD backlight (TH-DISPLAY) | ~120 mA |
+| 3.3 V | ESP32-C6 (Wi-Fi TX peak ~350 mA, avg ~80 mA) | ~80 mA avg |
+| 3.3 V | ESP32-H2 (802.15.4 TX peak ~30 mA) | ~20 mA avg |
+| 3.3 V | SHT40 + MCP23017 + ADS1115 + MCP4728 | ~5 mA |
+| 3.3 V | LCD + touch (TH-DISPLAY) | ~40 mA |
+
+3.3 V rail total ≈ 145 mA typical (peak ~480 mA during simultaneous Wi-Fi TX);
+the 1 A LDO leaves **~52 % headroom** at typical load and ample peak margin.
+**Conclusion: power is not a constraint.** Use a powered supply (not bus-powered
+USB) on the bench to avoid Wi-Fi-TX brownouts.
+
+---
+
+## 14. I/O scan timing
+
+Full scan of 47 I/O points completes in **~76 ms (7.6 % of the 1 s control
+budget)**. The scan is pipelined inside `control_loop_tick()`:
+
+```
+read DI ─▶ start ADC conversion ─▶ run control logic ─▶ read ADC (prev cycle) ─▶ write DO/AO
+```
+
+- **Analog inputs are one cycle (≈1 s) stale by design** — the loop uses the
+  previous cycle's ADS1115 result while the next conversion runs. Irrelevant for
+  HVAC (thermal time constants are minutes). Full 8-channel/16-bit scan at
+  128 SPS spans ~8 s; fine for the same reason.
+- **Safety DI** uses the MCP23017 INT → **GPIO14** ISR for a **<1 ms** response,
+  independent of the 1 s scan cadence.
+- Scan duration is published as **BACnet AI instance 304 (Diag-IOScanTime)**.

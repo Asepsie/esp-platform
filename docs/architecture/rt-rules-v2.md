@@ -25,6 +25,17 @@ The Zigbee coordinator runs on the H2 coprocessor, **not** the C6. On the C6,
 `zigbee_bridge_rx` receives H2 sensor reports over the UART bridge and is the only
 writer of Layer 1 state.
 
+**`io_scan` is NOT a separate task** — it runs *inside* `control_loop_tick()`
+(the prio-5 control_loop task). Its budget is **100 ms max** per scan cycle
+(measured ~76 ms for 47 I/O points), well within control_loop's 1 s period.
+Safety digital inputs bypass the scan via the MCP23017 INT → GPIO14 ISR (RT-03),
+giving a <1 ms response independent of the scan cadence.
+
+**Analog inputs are one control cycle (≈1 s) stale by design.** The scan reads
+the previous cycle's ADS1115 result while the next conversion runs (pipelined).
+This is a documented architectural decision, **not a bug** — HVAC thermal time
+constants are minutes, so 1 s of AI latency is irrelevant.
+
 ---
 
 ## RT-02 — No blocking calls in high-priority tasks

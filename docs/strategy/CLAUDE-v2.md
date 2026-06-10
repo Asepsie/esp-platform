@@ -211,12 +211,15 @@ thermostat/
 │   ├── main/main.c
 │   ├── components/
 │   │   ├── bsp/                         ← C6 HAL (named "bsp"; IDF reserves "hal"). hal_* API.
-│   │   ├── platform/                    ← timing abstraction
+│   │   │   ├── hal_gpio / hal_nvs / hal_timer / hal_wdt
+│   │   │   ├── hal_uart (H2 bridge) / hal_uart_mstp (RS-485 MS/TP)
+│   │   │   ├── hal_i2c + hal_i2c_expander (MCP23017/ADS1115/MCP4728)
+│   │   │   └── hal_sensor_local (onboard SHT40)
+│   │   ├── platform/                    ← timing/portability shim
 │   │   ├── sensor_state/                ← five-layer data model
-│   │   ├── zigbee_bridge/               ← NEW: UART bridge client (C6 side)
-│   │   │   ├── include/zigbee_bridge.h
-│   │   │   └── zigbee_bridge.c          ← receives sensor data from H2 via UART
-│   │   ├── bacnet/
+│   │   ├── zigbee_bridge/               ← UART bridge client (C6 side)
+│   │   ├── bacnet/                      ← transport abstraction + MS/TP stub
+│   │   ├── io_scan/                     ← NEW: wired-I/O scan (runs in control tick)
 │   │   ├── control/
 │   │   ├── ota/
 │   │   ├── commissioning/
@@ -268,6 +271,23 @@ thermostat/
 #define UART_BRIDGE_RX_GPIO 17
 #define H2_HEARTBEAT_TIMEOUT_MS 15000   // 3 missed heartbeats → H2 fault alarm
 
+// BACnet MS/TP over RS-485 (UART0; DE+RE on GPIO5 via HAL_GPIO_RS485_DE)
+#define BACNET_MSTP_ENABLED 1
+#define MSTP_BAUD_DEFAULT   38400        // PINMAP_MSTP_TX=GPIO3, MSTP_RX=GPIO4
+#define MSTP_MAC_ADDRESS    1            // MS/TP node address 0–127
+
+// Onboard SHT40 + shared I2C expansion bus (GPIO8/9 @ 400 kHz)
+#define PINMAP_SHT40_ADDR          0x44  // (in hal_pin_map.h)
+#define PINMAP_I2C_EXPANSION_SDA   8
+#define PINMAP_I2C_EXPANSION_SCL   9
+#define I2C_EXPANSION_FREQ_HZ      400000
+
+// Optional wired-I/O expanders (0 disables; ifndef-guarded for test override)
+#define IO_MCP23017_COUNT 0 | IO_ADS1115_COUNT 0 | IO_MCP4728_COUNT 0
+#define IO_MCP23017_ADDR_1 0x20 | IO_ADS1115_ADDR_1 0x48 | IO_MCP4728_ADDR 0x60
+#define IO_SCAN_SHT40_INTERVAL 10        // read SHT40 every N control ticks
+#define IO_SCAN_SAFETY_GPIO    14        // MCP23017 INT → GPIO14 (fast safety DI)
+
 #define HISTORY_SAMPLE_INTERVAL_MS (5*60*1000)
 #define HISTORY_DEPTH_SAMPLES 2016
 #define TASK_WDT_TIMEOUT_S 4
@@ -275,13 +295,15 @@ thermostat/
 
 ---
 
-## BACnet instance allocation (unchanged)
+## BACnet instance allocation
 ```
   0–99:   Space aggregated values
 100–199:  Equipment raw values
 200–299:  Control (setpoints, modes, relays)
-300–399:  Diagnostics (RT misses, Zigbee LQI, battery, H2 heartbeat status)
+300–399:  Diagnostics — 300 RT deadline misses, 301 Zigbee LQI, 302 battery min,
+          303 NVS commit count, 304 I/O scan time (µs), H2 heartbeat status
 ```
+Visible identically on both transports (BACnet/SC and MS/TP).
 
 ---
 
@@ -311,12 +333,16 @@ thermostat/
 - [x] `sensor_state` + `data_model.h` + `cluster_map`
 - [x] `zigbee_bridge` (C6 client — RX task via hal_uart → decode → cluster map → state store → aggregation; H2 heartbeat watchdog; 6 host tests for the full data path) + C6 `hal_uart`
 - [x] `hal_gpio` (relays, LED) + mock + tests green — component dir is `components/bsp/` (see note)
-- [ ] `hal_spi` + `hal_i2c` + `hal_ledc` (DISPLAY_LCD)
+- [x] `hal_i2c` (shared 400 kHz expansion bus, new i2c_master API) · [ ] `hal_spi` + `hal_ledc` (DISPLAY_LCD)
+- [x] `hal_uart_mstp` (RS-485/MS/TP) + `hal_sensor_local` (SHT40) + `hal_i2c_expander` (MCP23017/ADS1115/MCP4728) + mocks + host tests
+- [x] `bacnet` transport abstraction + MS/TP stub (SC + MS/TP coexist; framing/token TBD)
+- [x] onboard SHT40 + control-loop source fallback (Zigbee → local → fault) + tests
+- [x] `io_scan` pipelined wired-I/O scan (DI/AI/DO/AO + SHT40 every 10th tick; AI 304; safety-DI ISR) + 7 host tests
 - [ ] `hal_segment` (DISPLAY_SEGMENT)
 - [ ] `hal_ble` (commissioning)
 - [~] `hal_nvs` ✓ (write-coalescing, commit counter → BACnet AI 303, corruption recovery) · `hal_timer` ✓ (RT-08; deterministic sim-clock mock) · `hal_wdt` ✓ (RT-07; `init(timeout_s)`) — `control_task` drives both (TWDT timeout from `TASK_WDT_TIMEOUT_S`); target + mock + host tests green · `hal_ota` · `hal_wifi` (remaining)
 - [x] `control_loop` + tests green (relay hysteresis, modes, dry-contact lockout) + 1 Hz RT-01 control task (`control_task.c`)
-- [x] `app_main` init chain — nvs → gpio(+H2_EN) → wdt → sensor_state → zigbee_bridge → control_loop → control_task; every init checked, status-LED fault pattern + halt on failure (no abort)
+- [x] `app_main` init chain — nvs → gpio(+H2_EN) → wdt → sensor_state → zigbee_bridge → io_scan → control_loop → control_task; every init checked, status-LED fault pattern + halt on failure (no abort)
 - [ ] `ota_manager` + `ota_transport_menu` + H2 flashing via UART + tests green
 - [ ] `bacnet_server` + object model + tests green
 - [ ] `commissioning_ble`

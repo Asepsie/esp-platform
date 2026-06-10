@@ -156,14 +156,22 @@ removed in IDF v6.0):
 | HAL module | Header | Component (`PRIV_REQUIRES`) |
 |---|---|---|
 | `hal_gpio` | `driver/gpio.h` | `esp_driver_gpio` |
-| `hal_spi` | `driver/spi_master.h` | `esp_driver_spi` |
+| `hal_uart` | `driver/uart.h` | `esp_driver_uart` |
+| `hal_uart_mstp` | `driver/uart.h` (+ `hal_gpio` for DE) | `esp_driver_uart` |
 | `hal_i2c` | `driver/i2c_master.h` | `esp_driver_i2c` |
-| `hal_ledc` | `driver/ledc.h` | `esp_driver_ledc` |
-| `hal_timer` | `driver/gptimer.h` | `esp_driver_gptimer` |
+| `hal_i2c_expander` | (via `hal_i2c`) — MCP23017/ADS1115/MCP4728 | — |
+| `hal_sensor_local` | (via `hal_i2c`) — SHT40 | — |
+| `hal_timer` | `esp_timer.h` (+ `vTaskDelay`) | `esp_timer` |
 | `hal_nvs` | `nvs_flash.h` | `nvs_flash` |
+| `hal_wdt` | `esp_task_wdt.h` | `esp_system` |
+| `hal_spi` | `driver/spi_master.h` | `esp_driver_spi` |
+| `hal_ledc` | `driver/ledc.h` | `esp_driver_ledc` |
 | `hal_wifi` | `esp_wifi.h` | `esp_wifi` |
 | `hal_ble` | `esp_*` / NimBLE | `bt` |
-| `hal_wdt` | `esp_task_wdt.h` | `esp_system` |
+
+`hal_i2c_expander` and `hal_sensor_local` go through `hal_i2c`, so they carry no
+direct driver dependency — only `hal_i2c.c` includes `driver/i2c_master.h`.
+`hal_uart_mstp` drives the RS-485 direction (DE) line through `hal_gpio`.
 
 ISR-backed HAL code must honour RT-03 (ISR contract): handlers `IRAM_ATTR`, no
 allocation, no NVS/flash, only ISR-safe FreeRTOS calls.
@@ -268,6 +276,7 @@ Logical lines and physical pins (C6 map, hardware-spec §6):
 | `HAL_GPIO_RELAY_FAN` | 2 | Fan relay | LOW (off) |
 | `HAL_GPIO_STATUS_LED` | 15 | Status LED (strapping; ext pull-down) | LOW (off) |
 | `HAL_GPIO_H2_EN` | 11 | ESP32-H2 enable/reset (active-high = run) | LOW (held in reset) |
+| `HAL_GPIO_RS485_DE` | 5 | RS-485 driver-enable (DE+RE); high = TX, low = RX | LOW (receive) |
 
 API: `hal_gpio_init()`, `hal_gpio_set(id, level)`, `hal_gpio_get(id, &level)`.
 
@@ -289,11 +298,68 @@ low, invalid id, mock reset) — run against `hal_gpio_mock.c`.
 
 | Module | SKU scope | Status |
 |---|---|---|
-| `hal_gpio` | all | **done** (relays, LED, H2_EN) |
+| `hal_gpio` | all (relays, LED, H2_EN, RS-485 DE) | **done** |
+| `hal_uart` / `hal_uart_mstp` | all (H2 bridge / BACnet MS/TP) | **done** |
+| `hal_i2c` | all (shared expansion bus) | **done** |
+| `hal_i2c_expander` | all (MCP23017 / ADS1115 / MCP4728) | **done** |
+| `hal_sensor_local` | all (onboard SHT40) | **done** |
+| `hal_timer` / `hal_wdt` / `hal_nvs` | all | **done** |
 | `hal_spi` | TH-DISPLAY (LCD), TH-SEGMENT (MAX7219) | todo |
-| `hal_i2c` | TH-DISPLAY (touch) | todo |
 | `hal_ledc` | TH-DISPLAY (backlight PWM) | todo |
 | `hal_ble` | all (commissioning) | todo |
-| `hal_nvs` / `hal_ota` / `hal_wifi` / `hal_timer` / `hal_wdt` | all | todo |
+| `hal_ota` / `hal_wifi` | all | todo |
 
-H2-side `bsp` is minimal: UART (bridge), GPIO (status LED, H2 self), NVS.
+H2-side `bsp` is minimal: UART (bridge, via `hal_uart`), GPIO (status LED), NVS.
+
+---
+
+## 15. Pin map & free-GPIO budget (ESP32-C6)
+
+Assigned pins (per `hardware-spec-v2.md` §6 and the private `hal_pin_map.h`):
+
+| GPIO | Function | Notes |
+|---|---|---|
+| 0,1,2 | Relays HEAT/COOL/FAN | strapping-sensitive; ext pulls |
+| 3 | MS/TP UART0 TX (RS-485) | to MAX485 DI |
+| 4 | MS/TP UART0 RX (RS-485) | from MAX485 RO |
+| 5 | RS-485 DE+RE | `HAL_GPIO_RS485_DE`; high = drive bus |
+| 6,7 | SPI2 SCLK/MOSI (LCD/7-seg) | TH-DISPLAY/TH-SEGMENT |
+| 8,9 | **I2C expansion bus** SDA/SCL | shared; see §16 |
+| 10 | CST816 touch INT | TH-DISPLAY |
+| 11 | H2_EN | hard-reset the H2 |
+| 12,13 | USB-Serial/JTAG | console/debug |
+| 14 | **MCP23017 INT** (safety DI) | fast digital-input ISR |
+| 15 | Status LED | strapping; ext pull-down |
+| 16,17 | UART1 bridge TX/RX (↔ H2) | `hal_uart` |
+| 18,19,20,21 | SPI2 CS/DC/RST/BL (LCD) | TH-DISPLAY only |
+
+Free-GPIO headroom by SKU (≈30 usable GPIO on C6-WROOM-1):
+
+| SKU | Display/UI pins | MS/TP+I2C+bridge+safety | Free GPIO |
+|---|---|---|---|
+| TH-DISPLAY | 6,7,8,9,10,18,19,20,21 (LCD+touch) | 3,4,5,8,9,14,16,17 | ~6 |
+| TH-SEGMENT | 6,7,18 (MAX7219) | 3,4,5,8,9,14,16,17 | ~12 |
+| TH-HEADLESS | — (LEDs only) | 3,4,5,8,9,14,16,17 | ~15 |
+
+GPIO8/9 are counted once (the I2C bus is shared between touch and the expanders).
+
+---
+
+## 16. I2C expansion bus architecture
+
+One shared I2C master bus (`hal_i2c`) on **GPIO8 (SDA) / GPIO9 (SCL)** at **400 kHz
+(fast mode)** carries every I2C device. `hal_i2c` keeps one device handle per
+7-bit address (lazily created), so multiple drivers share the bus with no
+contention beyond normal arbitration.
+
+| Device | Addr | Driver | SKUs |
+|---|---|---|---|
+| SHT40 temp/RH | `0x44` | `hal_sensor_local` | all |
+| CST816 touch | `0x15` | (ui, future) | TH-DISPLAY |
+| MCP23017 #1/#2 (DIO) | `0x20` / `0x21` | `hal_i2c_expander` | optional |
+| ADS1115 #1/#2 (ADC) | `0x48` / `0x49` | `hal_i2c_expander` | optional |
+| MCP4728 (DAC) | `0x60` | `hal_i2c_expander` | optional |
+
+All addresses are distinct, so the shared bus has no conflicts. The MCP23017
+interrupt output drives **GPIO14** for a fast safety-DI path
+(`io_scan_safety_interrupt()`), bypassing the 1 s scan cadence (<1 ms response).
