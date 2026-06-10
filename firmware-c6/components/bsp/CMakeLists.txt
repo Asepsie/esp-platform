@@ -9,7 +9,8 @@
 # it is the sole includer of driver/gpio.h. The mock under mock/ is for host
 # unit tests only and is pulled in by tests/host, never by this component.
 # Pin numbers live in private/ (PRIV_INCLUDE_DIRS) so they stay HAL-internal.
-idf_component_register(SRCS "hal_gpio.c" "hal_nvs.c" "hal_timer.c" "hal_wdt.c" "hal_uart.c"
+idf_component_register(SRCS "hal_gpio.c" "hal_nvs.c" "hal_timer.c" "hal_wdt.c"
+                            "hal_uart.c" "hal_uart_mstp.c"
                        INCLUDE_DIRS "include"
                        PRIV_INCLUDE_DIRS "private"
                        REQUIRES platform

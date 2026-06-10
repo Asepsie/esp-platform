@@ -32,6 +32,7 @@ typedef enum {
     HAL_GPIO_RELAY_FAN,      /**< Fan relay output (active high, off=low).       */
     HAL_GPIO_STATUS_LED,     /**< Status LED output (active high, off=low).      */
     HAL_GPIO_H2_EN,          /**< ESP32-H2 enable/reset line (active high=run).  */
+    HAL_GPIO_RS485_DE,       /**< RS-485 driver-enable (DE+RE); high=TX, low=RX. */
     HAL_GPIO_COUNT,          /**< Number of logical lines (sentinel).            */
 } hal_gpio_id_t;
 

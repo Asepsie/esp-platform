@@ -87,6 +87,16 @@
 /** @} */
 
 /**
+ * @defgroup cfg_mstp BACnet MS/TP (RS-485)
+ * @brief Secondary BACnet datalink over RS-485 (runs alongside BACnet/SC).
+ * @{
+ */
+#define BACNET_MSTP_ENABLED  1      /**< Build/enable the MS/TP transport. */
+#define MSTP_BAUD_DEFAULT    38400  /**< Line rate (9600–76800). */
+#define MSTP_MAC_ADDRESS     1      /**< MS/TP node MAC address (0–127). */
+/** @} */
+
+/**
  * @defgroup cfg_nvs NVS
  * @brief Non-volatile storage behaviour.
  * @{

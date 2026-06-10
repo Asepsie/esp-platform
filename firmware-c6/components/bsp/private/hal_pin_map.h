@@ -18,6 +18,16 @@
 #include "hal_gpio.h"
 #include "thermostat_config.h"   /* H2_EN_GPIO (board pin constants) */
 
+/* BACnet MS/TP over RS-485 (used by hal_uart_mstp.c). The DE line is also
+ * exposed as the logical HAL_GPIO_RS485_DE so direction control goes through
+ * hal_gpio. PINMAP_MSTP_UART is a plain int (UART_NUM_0) to keep this header
+ * free of any ESP-IDF driver dependency (hal-design.md §5.2). */
+#define PINMAP_MSTP_TX      3
+#define PINMAP_MSTP_RX      4
+#define PINMAP_RS485_DE     5
+#define PINMAP_MSTP_UART    0       /* UART_NUM_0 */
+#define PINMAP_MSTP_BAUD    38400   /* configurable 9600–76800 */
+
 /** @brief Physical definition of one logical GPIO line. */
 typedef struct {
     uint8_t gpio_num; /**< ESP32-C6 physical GPIO number. */
@@ -35,6 +45,7 @@ static const hal_pin_def_t HAL_PIN_MAP[HAL_GPIO_COUNT] = {
     [HAL_GPIO_RELAY_FAN]  = { .gpio_num = 2  }, /* RELAY_FAN  */
     [HAL_GPIO_STATUS_LED] = { .gpio_num = 15 }, /* STATUS_LED (strapping, ext pull-down) */
     [HAL_GPIO_H2_EN]      = { .gpio_num = H2_EN_GPIO }, /* H2_EN (hard reset via 10kΩ) */
+    [HAL_GPIO_RS485_DE]   = { .gpio_num = PINMAP_RS485_DE }, /* RS-485 DE+RE (TX when high) */
 };
 
 #endif /* HAL_PIN_MAP_H */
