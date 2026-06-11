@@ -318,10 +318,10 @@ Visible identically on both transports (BACnet/SC and MS/TP).
 ### firmware-h2 (simpler — do first to validate Zigbee)
 - [x] H2 project scaffold + sdkconfig
 - [ ] `zigbee_coordinator` (coordinator role, network formation)
-- [ ] `zigbee_cluster_handler` (attribute → bridge message)
+- [x] `zigbee_cluster_handler` (ZCL attribute → bridge_sensor_report_t; pure C, scale + plausibility, host-tested)
 - [x] `uart_bridge` (H2 server side — transport/RX/heartbeat done; command dispatch stubbed)
 - [x] H2 `bsp` HAL — `hal_uart` + `hal_gpio` (status LED) + host mocks/tests; `uart_bridge.c` now goes through `hal_uart` (the `driver/uart.h` boundary violation is fixed). NVS TBD.
-- [ ] `test_cluster_handler.c` green
+- [x] `test_cluster_handler.c` green (14 cases: per-type decode/scale, plausibility drop, battery_pct, error paths)
 - [x] `test_uart_bridge_framing.c` green
 - [ ] Zigbee pairing: Sonoff SNZB-02P on real hardware
 - [ ] UART bridge integration with C6

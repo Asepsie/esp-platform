@@ -91,5 +91,13 @@ target_include_directories(test_h2_hal PRIVATE
     ../../components/bsp/mock
     ../../components/platform/include)
 
-# Planned next (see module checklist in CLAUDE.md):
-#   add_host_test(test_cluster_handler ...)
+# Zigbee cluster handler — pure ZCL-attribute -> bridge_sensor_report_t logic
+# (no esp-zigbee-sdk). Links the handler source and the headers it needs: its
+# own include/, the shared protocol header, and platform_compat (esp_err_t).
+add_host_test(test_cluster_handler
+    tests/test_cluster_handler.c
+    ../../components/zigbee_coordinator/zigbee_cluster_handler.c)
+target_include_directories(test_cluster_handler PRIVATE
+    ../../components/zigbee_coordinator/include
+    ../../components/uart_bridge/include
+    ../../components/platform/include)
