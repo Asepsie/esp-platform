@@ -1,0 +1,14 @@
+## IDF Component Manager manifest for firmware-h2.
+##
+## The Zigbee stack ships as two managed components that the build downloads on
+## first configure (~5 MB) into firmware-h2/managed_components/ (gitignored):
+##   - esp-zigbee-lib : the ZBOSS-based Zigbee 3.0 API (esp_zb_* / esp_zb_zcl_*)
+##   - esp-zboss-lib  : the precompiled ZBOSS stack archive esp-zigbee-lib links
+##
+## Only the zigbee_coordinator component calls these APIs (target-only); the
+## host-testable cluster handler has zero dependency on them. See CLAUDE.md.
+dependencies:
+  espressif/esp-zigbee-lib:
+    version: "~1.5.0"
+  espressif/esp-zboss-lib:
+    version: "~1.5.0"

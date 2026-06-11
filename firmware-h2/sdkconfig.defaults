@@ -5,3 +5,21 @@ CONFIG_IDF_TARGET="esp32h2"
 
 # Serial console over the built-in USB-Serial/JTAG controller.
 CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+
+# Zigbee — enable the stack and build the coordinator/router (ZCZR) library
+# variant on the SoC-native 802.15.4 radio. Verified against esp-zigbee-lib
+# 1.5.1 Kconfig: the only Zigbee Kconfig symbols are ZB_ENABLED, the role
+# (ZB_ZCZR / ZB_ZED / ZB_ZGPD), and the radio (ZB_RADIO_NATIVE / _SPINEL_UART).
+CONFIG_ZB_ENABLED=y
+CONFIG_ZB_ZCZR=y
+CONFIG_ZB_RADIO_NATIVE=y
+
+# NOTE: coordinator-vs-router, Zigbee channel (default 11), security mode and
+# install-code policy are NOT Kconfig — they are set at RUNTIME via esp_zb_*
+# APIs in components/zigbee_coordinator/zigbee_coordinator.c. The originally
+# specified CONFIG_ZB_COORDINATOR / ZB_ZCL_SUPPORT / ZB_CHANNEL /
+# ZB_SECURITY_MODE / ZB_INSTALL_CODE do not exist in esp-zigbee-lib and were
+# dropped (they only produced "unknown kconfig symbol" warnings).
+
+# Use Zigbee (802.15.4), not Thread.
+CONFIG_OPENTHREAD_ENABLED=n
