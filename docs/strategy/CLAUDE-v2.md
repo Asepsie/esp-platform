@@ -317,9 +317,9 @@ Visible identically on both transports (BACnet/SC and MS/TP).
 
 ### firmware-h2 (simpler — do first to validate Zigbee)
 - [x] H2 project scaffold + sdkconfig
-- [ ] `zigbee_coordinator` (coordinator role, network formation)
+- [x] `zigbee_coordinator` (coordinator role + network formation, attr-report → cluster_handler → report_cb, device-annce join + config-reporting; esp-zigbee-sdk 1.5.1; target build only). ⚠ needs `zb_storage`/`zb_fct` partitions before it runs on silicon (see note).
 - [x] `zigbee_cluster_handler` (ZCL attribute → bridge_sensor_report_t; pure C, scale + plausibility, host-tested)
-- [x] `uart_bridge` (H2 server side — transport/RX/heartbeat done; command dispatch stubbed)
+- [x] `uart_bridge` (H2 server side — transport/RX/heartbeat done; permit-join/poll-attr command dispatch wired in main.c)
 - [x] H2 `bsp` HAL — `hal_uart` + `hal_gpio` (status LED) + host mocks/tests; `uart_bridge.c` now goes through `hal_uart` (the `driver/uart.h` boundary violation is fixed). NVS TBD.
 - [x] `test_cluster_handler.c` green (14 cases: per-type decode/scale, plausibility drop, battery_pct, error paths)
 - [x] `test_uart_bridge_framing.c` green
