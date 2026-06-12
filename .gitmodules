@@ -1,0 +1,3 @@
+[submodule "firmware-c6/components/bacnet/vendor/bacnet-stack"]
+	path = firmware-c6/components/bacnet/vendor/bacnet-stack
+	url = https://github.com/bacnet-stack/bacnet-stack.git

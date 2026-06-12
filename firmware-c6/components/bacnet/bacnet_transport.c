@@ -34,3 +34,8 @@ size_t bacnet_server_transport_count(void)
 {
     return s_count;
 }
+
+const bacnet_transport_ops_t *bacnet_transport_get(size_t index)
+{
+    return (index < s_count) ? s_transports[index] : NULL;
+}

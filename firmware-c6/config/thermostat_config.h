@@ -97,6 +97,23 @@
 /** @} */
 
 /**
+ * @defgroup cfg_bacnet BACnet device
+ * @brief Northbound BACnet server identity + task sizing (design §9).
+ *        Vendor ID / device instance are DEV PLACEHOLDERS — register the vendor
+ *        ID with ASHRAE and assign a site instance before production.
+ * @{
+ */
+#define BACNET_DEVICE_INSTANCE      12345  /**< Device object instance (dev). */
+// Vendor ID / name are bacnet-stack-reserved macros; set at its override point
+// (components/bacnet/port/bacnet-config.h) so the stack picks them up directly.
+#define BACNET_MODEL_NAME           "SZC-C6"
+#define BACNET_TASK_PERIOD_MS       250    /**< Server poll / PV-refresh cadence. */
+#define BACNET_TASK_PRIORITY        4      /**< Below control task (5) — HVAC wins. */
+#define BACNET_TASK_STACK_SIZE      6144   /**< bacnet_task stack (bytes). */
+#define BACNET_MAX_COV_SUBSCRIPTIONS 16    /**< Static COV table size (M3). */
+/** @} */
+
+/**
  * @defgroup cfg_i2c I2C expansion bus
  * @brief Shared 400 kHz I2C bus (SHT40, touch, MCP23017/ADS1115/MCP4728).
  * @{

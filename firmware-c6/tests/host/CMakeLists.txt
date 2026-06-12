@@ -98,6 +98,29 @@ target_include_directories(test_sensor_state PRIVATE
     ../../components/data_model/include
     ../../components/platform/include)
 
+# bacnet_object_map: pure static object table. No stack, no sensor_state.
+add_host_test(test_bacnet_object_map
+    test_bacnet_object_map.c
+    ../../components/bacnet/bacnet_object_map.c)
+target_include_directories(test_bacnet_object_map PRIVATE
+    ../../components/bacnet/include
+    ../../components/data_model/include)
+
+# bacnet_objects: present-value binding resolved against the real sensor_state
+# store (+ cluster_map + platform compat). No bacnet-stack in the loop.
+add_host_test(test_bacnet_objects
+    test_bacnet_objects.c
+    ../../components/bacnet/bacnet_objects.c
+    ../../components/bacnet/bacnet_object_map.c
+    ../../components/sensor_state/sensor_state.c
+    ../../components/cluster_map/cluster_map.c)
+target_include_directories(test_bacnet_objects PRIVATE
+    ../../components/bacnet/include
+    ../../components/sensor_state/include
+    ../../components/cluster_map/include
+    ../../components/data_model/include
+    ../../components/platform/include)
+
 # hal_gpio: tested against the host MOCK (hal_gpio_mock.c), never the target
 # hal_gpio.c — so this links no ESP-IDF and includes no driver/* headers.
 # (Lives in the "bsp" component — see components/bsp/CMakeLists.txt for why.)

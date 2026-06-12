@@ -65,6 +65,14 @@ esp_err_t bacnet_server_add_transport(const bacnet_transport_ops_t *transport);
 /** @brief Number of transports currently registered (diagnostic). */
 size_t bacnet_server_transport_count(void);
 
+/**
+ * @brief Registered transport ops by index, or NULL if @p index is out of range.
+ *
+ * Lets the datalink glue fan a PDU out to / poll every active datalink without
+ * owning the registry. Indices are stable for the life of the registration set.
+ */
+const bacnet_transport_ops_t *bacnet_transport_get(size_t index);
+
 /** @brief MS/TP transport ops (stub datalink over hal_uart_mstp). */
 const bacnet_transport_ops_t *bacnet_transport_mstp_ops(void);
 

@@ -14,6 +14,8 @@
 #include "io_scan.h"
 #include "control_loop.h"
 #include "control_task.h"
+#include "bacnet_server.h"
+#include "bacnet_transport.h"
 #include "thermostat_config.h"   // TASK_WDT_TIMEOUT_S
 
 static const char *TAG = "main";
@@ -99,6 +101,21 @@ void app_main(void)
     err = control_task_start();
     if (err != ESP_OK) {
         enter_fault("control_task_start", err);
+    }
+
+    // 10. Northbound BACnet server: build the device + objects, register the
+    //     datalink(s), then start the polling task (discoverable via Who-Is).
+    err = bacnet_server_init();
+    if (err != ESP_OK) {
+        enter_fault("bacnet_server_init", err);
+    }
+    err = bacnet_server_add_transport(bacnet_transport_mstp_ops());
+    if (err != ESP_OK) {
+        enter_fault("bacnet_add_transport(mstp)", err);
+    }
+    err = bacnet_server_start();
+    if (err != ESP_OK) {
+        enter_fault("bacnet_server_start", err);
     }
 
     ESP_LOGI(TAG, "init complete");
