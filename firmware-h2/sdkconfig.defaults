@@ -23,3 +23,9 @@ CONFIG_ZB_RADIO_NATIVE=y
 
 # Use Zigbee (802.15.4), not Thread.
 CONFIG_OPENTHREAD_ENABLED=n
+
+# Custom partition table: minimum safe OTA (single ota_0 slot + factory
+# golden-recovery + otadata) plus the Zigbee stack's zb_storage / zb_fct.
+# Not dual-bank. See partitions.csv.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
